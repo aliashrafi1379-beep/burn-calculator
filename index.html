@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>آناتومی سوختگی پارکلند - پیکسلی با قلم متغیر</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #151d30;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --part-default: #1e293b;
+      --part-stroke: #334155;
+      --burn-color: #ef4444;
+      --accent: #38bdf8;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Tahoma, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .panel {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 12px 14px;
+      width: 100%;
+      max-width: 420px;
+      box-sizing: border-box;
+      margin-bottom: 10px;
+      border: 1px solid #1e293b;
+    }
+    .input-row { display: flex; gap: 10px; }
+    .field { flex: 1; }
+    label { font-size: 11px; color: var(--muted); margin-bottom: 4px; display: block; font-weight: 600; }
+    select, input[type="number"] {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      background-color: #0b0f19;
+      color: #fff;
+      font-size: 13px;
+      box-sizing: border-box;
+      outline: none;
+    }
+    .mode-bar { display: flex; gap: 8px; margin-bottom: 10px; }
+    .mode-btn {
+      flex: 1;
+      padding: 8px;
+      font-size: 12px;
+      font-weight: bold;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #0b0f19;
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .mode-btn.active {
+      background: var(--accent);
+      color: #0b0f19;
+      border-color: var(--accent);
+    }
+    
+    /* کنترل اندازه قلم */
+    .brush-control {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      background: #0b0f19;
+      border: 1px solid #1e293b;
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    .brush-control.visible {
+      display: flex;
+    }
+    .brush-slider {
+      flex: 1;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+    .brush-preview {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #151d30;
+      border-radius: 6px;
+      border: 1px solid #334155;
+    }
+    .brush-dot {
+      background-color: var(--burn-color);
+      border-radius: 50%;
+      transition: width 0.1s, height 0.1s;
+    }
+
+    .canvas-wrapper {
+      position: relative;
+      width: 360px;
+      height: 370px;
+      margin: 0 auto;
+      touch-action: none;
+    }
+    .svg-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+    #drawCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      cursor: crosshair;
+    }
+    .organ {
+      fill: var(--part-default);
+      stroke: var(--part-stroke);
+      stroke-width: 1.5;
+      cursor: pointer;
+      transition: fill 0.2s;
+    }
+    .organ.active {
+      fill: var(--burn-color) !important;
+      stroke: #991b1b !important;
+    }
+    .tag { font-size: 9px; fill: #64748b; font-weight: bold; pointer-events: none; text-anchor: middle; }
+    .calc-card {
+      background: #0b0f19;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 10px;
+      line-height: 1.8;
+      font-size: 12.5px;
+    }
+    .highlight-val { color: var(--accent); font-weight: bold; font-size: 14px; }
+    .submit-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="panel">
+    <div class="input-row">
+      <div class="field">
+        <label>رده سنی:</label>
+        <select id="ageGroup" onchange="onAgeGroupChange()">
+          <option value="adult">بزرگسال (قانون ۹ها)</option>
+          <option value="child">اطفال (Lund-Browder)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>وزن (kg):</label>
+        <input type="number" id="weight" value="70" min="1" max="250" oninput="updateCalc()">
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="mode-bar">
+      <button class="mode-btn active" id="btnModeOrgan" onclick="setMode('organ')">
+        ✋ انتخاب کل اندام
+      </button>
+      <button class="mode-btn" id="btnModeDraw" onclick="setMode('draw')">
+        ✏️ کشیدن لکه / موضعی
+      </button>
+      <button class="mode-btn" style="flex: 0.5; color: #ef4444;" onclick="clearAll()">
+        🗑 پاک
+      </button>
+    </div>
+
+    <!-- نوار تنظیم ضخامت قلم -->
+    <div class="brush-control" id="brushControl">
+      <label style="margin: 0; white-space: nowrap;">اندازه قلم:</label>
+      <input type="range" id="brushSize" class="brush-slider" min="4" max="32" value="12" oninput="updateBrushSize()">
+      <div class="brush-preview">
+        <div id="brushDot" class="brush-dot" style="width: 12px; height: 12px;"></div>
+      </div>
+    </div>
+
+    <div class="canvas-wrapper">
+      <!-- وکتور بزرگسالان -->
+      <svg id="svgAdult" class="svg-layer" viewBox="0 0 360 370">
+        <g id="frontAdult">
+          <text x="90" y="16" class="tag" style="fill:#38bdf8;">بزرگسال - قدامی</text>
+          <path id="ad_head_ant" data-organ="head_ant" class="organ" onclick="handleOrganClick('ad_head_ant')" d="M90,24 C100,24 108,34 107,46 C106,56 99,64 90,65 C81,64 74,56 73,46 C72,34 80,24 90,24 Z" />
+          <path id="ad_chest" data-organ="chest" class="organ" onclick="handleOrganClick('ad_chest')" d="M70,72 C77,70 103,70 110,72 C113,88 112,108 108,118 C98,119 82,119 72,118 C68,108 67,88 70,72 Z" />
+          <path id="ad_abdomen" data-organ="abdomen" class="organ" onclick="handleOrganClick('ad_abdomen')" d="M72,120 C82,121 98,121 108,120 C106,133 109,150 111,162 C100,164 80,164 69,162 C71,150 74,133 72,120 Z" />
+          <path id="ad_arm_r_ant" data-organ="arm_r_ant" class="organ" onclick="handleOrganClick('ad_arm_r_ant')" d="M66,74 C59,86 53,110 50,126 C46,142 42,162 40,172 C37,174 43,177 46,173 C50,163 56,140 60,124 C62,110 66,90 69,80 Z" />
+          <path id="ad_arm_l_ant" data-organ="arm_l_ant" class="organ" onclick="handleOrganClick('ad_arm_l_ant')" d="M114,74 C121,86 127,110 130,126 C134,142 138,162 140,172 C143,174 137,177 134,173 C130,163 124,140 120,124 C118,110 114,90 111,80 Z" />
+          <polygon id="ad_genital" data-organ="genital" class="organ" onclick="handleOrganClick('ad_genital')" points="83,165 97,165 90,178" />
+          <path id="ad_leg_r_ant" data-organ="leg_r_ant" class="organ" onclick="handleOrganClick('ad_leg_r_ant')" d="M69,166 C80,166 85,169 87,183 C89,212 86,244 84,266 C83,288 84,320 84,330 C79,332 70,332 67,326 C68,314 69,286 68,264 C67,236 62,201 64,181 C65,172 67,167 69,166 Z" />
+          <path id="ad_leg_l_ant" data-organ="leg_l_ant" class="organ" onclick="handleOrganClick('ad_leg_l_ant')" d="M111,166 C100,166 95,169 93,183 C91,212 94,244 96,266 C97,288 96,320 96,330 C101,332 110,332 113,326 C112,314 111,286 112,264 C113,236 118,201 116,181 C115,172 113,167 111,166 Z" />
+        </g>
+        <g id="backAdult">
+          <text x="270" y="16" class="tag" style="fill:#38bdf8;">بزرگسال - خلفی</text>
+          <path id="ad_head_post" data-organ="head_post" class="organ" onclick="handleOrganClick('ad_head_post')" d="M270,24 C280,24 288,34 287,46 C286,56 279,64 270,65 C261,64 254,56 253,46 C252,34 260,24 270,24 Z" />
+          <path id="ad_upper_back" data-organ="upper_back" class="organ" onclick="handleOrganClick('ad_upper_back')" d="M250,72 C257,70 283,70 290,72 C293,88 292,108 288,118 C278,119 262,119 252,118 C248,108 247,88 250,72 Z" />
+          <path id="ad_lower_back" data-organ="lower_back" class="organ" onclick="handleOrganClick('ad_lower_back')" d="M252,120 C262,121 278,121 288,120 C287,137 290,157 291,165 C280,167 260,167 249,165 C250,157 253,137 252,120 Z" />
+          <path id="ad_arm_r_post" data-organ="arm_r_post" class="organ" onclick="handleOrganClick('ad_arm_r_post')" d="M246,74 C239,86 233,110 230,126 C226,142 222,162 220,172 C217,174 223,177 226,173 C230,163 236,140 240,124 C242,110 246,90 249,80 Z" />
+          <path id="ad_arm_l_post" data-organ="arm_l_post" class="organ" onclick="handleOrganClick('ad_arm_l_post')" d="M294,74 C301,86 307,110 310,126 C314,142 318,162 320,172 C323,174 317,177 314,173 C310,163 304,140 300,124 C298,110 294,90 291,80 Z" />
+          <path id="ad_leg_r_post" data-organ="leg_r_post" class="organ" onclick="handleOrganClick('ad_leg_r_post')" d="M249,168 C260,168 265,170 267,183 C269,212 266,244 264,266 C263,288 264,320 264,330 C259,332 250,332 247,326 C248,314 249,286 248,264 C247,236 242,201 244,181 C245,172 247,169 249,168 Z" />
+          <path id="ad_leg_l_post" data-organ="leg_l_post" class="organ" onclick="handleOrganClick('ad_leg_l_post')" d="M291,168 C280,168 275,170 273,183 C271,212 274,244 276,266 C277,288 276,320 276,330 C281,332 290,332 293,326 C292,314 291,286 292,264 C293,236 298,201 296,181 C295,172 293,169 291,168 Z" />
+        </g>
+      </svg>
+
+      <!-- وکتور اطفال -->
+      <svg id="svgChild" class="svg-layer" viewBox="0 0 360 370" style="display: none;">
+        <g id="frontChild">
+          <text x="90" y="16" class="tag" style="fill:#f59e0b;">اطفال - قدامی</text>
+          <path id="ch_head_ant" data-organ="head_ant" class="organ" onclick="handleOrganClick('ch_head_ant')" d="M90,20 C105,20 116,33 115,52 C114,68 103,78 90,78 C77,78 66,68 65,52 C64,33 75,20 90,20 Z" />
+          <path id="ch_chest" data-organ="chest" class="organ" onclick="handleOrganClick('ch_chest')" d="M68,84 C76,82 104,82 112,84 C116,102 115,124 111,134 C100,135 80,135 69,134 C65,124 64,102 68,84 Z" />
+          <path id="ch_abdomen" data-organ="abdomen" class="organ" onclick="handleOrganClick('ch_abdomen')" d="M69,136 C80,137 100,137 111,136 C110,154 112,176 113,186 C101,188 79,188 67,186 C68,176 70,154 69,136 Z" />
+          <path id="ch_arm_r_ant" data-organ="arm_r_ant" class="organ" onclick="handleOrganClick('ch_arm_r_ant')" d="M64,88 C57,100 50,122 47,138 C44,152 41,168 39,176 C36,178 42,181 45,177 C48,168 53,148 57,135 C60,122 63,103 66,94 Z" />
+          <path id="ch_arm_l_ant" data-organ="arm_l_ant" class="organ" onclick="handleOrganClick('ch_arm_l_ant')" d="M116,88 C123,100 130,122 133,138 C136,152 139,168 141,176 C144,178 138,181 135,177 C132,168 127,148 123,135 C120,122 117,103 114,94 Z" />
+          <polygon id="ch_genital" data-organ="genital" class="organ" onclick="handleOrganClick('ch_genital')" points="83,188 97,188 90,200" />
+          <path id="ch_leg_r_ant" data-organ="leg_r_ant" class="organ" onclick="handleOrganClick('ch_leg_r_ant')" d="M67,190 C78,190 84,193 86,206 C87,230 85,258 83,278 C82,298 83,316 83,322 C78,324 70,324 67,319 C68,308 69,286 68,266 C67,242 61,218 63,203 C64,195 65,191 67,190 Z" />
+          <path id="ch_leg_l_ant" data-organ="leg_l_ant" class="organ" onclick="handleOrganClick('ch_leg_l_ant')" d="M113,190 C102,190 96,193 94,206 C93,230 95,258 97,278 C98,298 97,316 97,322 C102,324 110,324 113,319 C112,308 111,286 112,266 C113,242 119,218 117,203 C116,195 115,191 113,190 Z" />
+        </g>
+        <g id="backChild">
+          <text x="270" y="16" class="tag" style="fill:#f59e0b;">اطفال - خلفی</text>
+          <path id="ch_head_post" data-organ="head_post" class="organ" onclick="handleOrganClick('ch_head_post')" d="M270,20 C285,20 296,33 295,52 C294,68 283,78 270,78 C257,78 246,68 245,52 C244,33 255,20 270,20 Z" />
+          <path id="ch_upper_back" data-organ="upper_back" class="organ" onclick="handleOrganClick('ch_upper_back')" d="M248,84 C256,82 284,82 292,84 C296,102 295,124 291,134 C280,135 260,135 249,134 C245,124 244,102 248,84 Z" />
+          <path id="ch_lower_back" data-organ="lower_back" class="organ" onclick="handleOrganClick('ch_lower_back')" d="M249,136 C260,137 280,137 291,136 C290,154 292,176 293,186 C281,188 259,188 247,186 C248,176 250,154 249,136 Z" />
+          <path id="ch_arm_r_post" data-organ="arm_r_post" class="organ" onclick="handleOrganClick('ch_arm_r_post')" d="M244,88 C237,100 230,122 227,138 C224,152 221,168 219,176 C216,178 222,181 225,177 C228,168 233,148 237,135 C240,122 243,103 246,94 Z" />
+          <path id="ch_arm_l_post" data-organ="arm_l_post" class="organ" onclick="handleOrganClick('ch_arm_l_post')" d="M296,88 C303,100 310,122 313,138 C316,152 319,168 321,176 C324,178 318,181 315,177 C312,168 307,148 303,135 C300,122 297,103 294,94 Z" />
+          <path id="ch_leg_r_post" data-organ="leg_r_post" class="organ" onclick="handleOrganClick('ch_leg_r_post')" d="M247,190 C258,190 264,193 266,206 C267,230 265,258 263,278 C262,298 263,316 263,322 C258,324 250,324 247,319 C248,308 249,286 248,266 C247,242 241,218 243,203 C244,195 245,191 247,190 Z" />
+          <path id="ch_leg_l_post" data-organ="leg_l_post" class="organ" onclick="handleOrganClick('ch_leg_l_post')" d="M293,190 C282,190 276,193 274,206 C273,230 275,258 277,278 C278,298 277,316 277,322 C282,324 290,324 293,319 C292,308 291,286 292,266 C293,242 299,218 297,203 C296,195 295,191 293,190 Z" />
+        </g>
+      </svg>
+
+      <canvas id="drawCanvas" width="360" height="370"></canvas>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="calc-card" id="metricsDisplay">
+      درصد کل سوختگی (TBSA): <span class="highlight-val">۰٪</span><br>
+      • اندام‌های کامل: <b>۰٪</b> | • لکه‌های موضعی: <b>۰٪</b><br>
+      مایع ۲۴ ساعت اول: <span class="highlight-val">۰</span> سی‌سی رینگر<br>
+      سرعت تزریق ۸ ساعت اول: <span class="highlight-val">۰</span> cc/hr
+    </div>
+    <button class="submit-btn" onclick="sendToBot()">ارسال اطلاعات به ربات</button>
+  </div>
+
+  <script>
+    const tg = window.Telegram?.WebApp;
+    if (tg) tg.expand();
+
+    let currentMode = 'organ';
+    const selectedOrgans = new Set();
+    let currentBrushSize = 12;
+
+    const canvas = document.getElementById('drawCanvas');
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+
+    const hitCanvas = document.createElement('canvas');
+    hitCanvas.width = 360;
+    hitCanvas.height = 370;
+    const hitCtx = hitCanvas.getContext('2d');
+
+    const ORGAN_WEIGHTS = {
+      adult: {
+        head_ant: 4.5, head_post: 4.5, chest: 9, abdomen: 9,
+        upper_back: 9, lower_back: 9, arm_r_ant: 4.5, arm_r_post: 4.5,
+        arm_l_ant: 4.5, arm_l_post: 4.5, leg_r_ant: 9, leg_r_post: 9,
+        leg_l_ant: 9, leg_l_post: 9, genital: 1
+      },
+      child: {
+        head_ant: 9, head_post: 9, chest: 9, abdomen: 9,
+        upper_back: 9, lower_back: 9, arm_r_ant: 4.5, arm_r_post: 4.5,
+        arm_l_ant: 4.5, arm_l_post: 4.5, leg_r_ant: 7, leg_r_post: 7,
+        leg_l_ant: 7, leg_l_post: 7, genital: 1
+      }
+    };
+
+    const ORGAN_COLORS = {
+      head_ant: [10, 10, 10], head_post: [20, 20, 20],
+      chest: [30, 30, 30], abdomen: [40, 40, 40],
+      upper_back: [50, 50, 50], lower_back: [60, 60, 60],
+      arm_r_ant: [70, 70, 70], arm_l_ant: [80, 80, 80],
+      arm_r_post: [90, 90, 90], arm_l_post: [100, 100, 100],
+      leg_r_ant: [110, 110, 110], leg_l_ant: [120, 120, 120],
+      leg_r_post: [130, 130, 130], leg_l_post: [140, 140, 140],
+      genital: [150, 150, 150]
+    };
+
+    let organTotalPixels = {};
+
+    function updateBrushSize() {
+      currentBrushSize = parseInt(document.getElementById('brushSize').value, 10);
+      const dot = document.getElementById('brushDot');
+      dot.style.width = currentBrushSize + 'px';
+      dot.style.height = currentBrushSize + 'px';
+    }
+
+    function rasterizeOrgans() {
+      const group = document.getElementById('ageGroup').value;
+      const activeSvg = group === 'adult' ? document.getElementById('svgAdult') : document.getElementById('svgChild');
+      
+      hitCtx.clearRect(0, 0, 360, 370);
+      organTotalPixels = {};
+
+      const paths = activeSvg.querySelectorAll('.organ');
+      paths.forEach(p => {
+        const organKey = p.getAttribute('data-organ');
+        const color = ORGAN_COLORS[organKey];
+        if (!color) return;
+
+        const path2d = new Path2D(p.getAttribute('d') || '');
+        hitCtx.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+        hitCtx.fill(path2d);
+      });
+
+      const imgData = hitCtx.getImageData(0, 0, 360, 370).data;
+      for (let i = 0; i < imgData.length; i += 4) {
+        const r = imgData[i];
+        if (r > 0) {
+          for (let key in ORGAN_COLORS) {
+            if (ORGAN_COLORS[key][0] === r) {
+              organTotalPixels[key] = (organTotalPixels[key] || 0) + 1;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    setTimeout(rasterizeOrgans, 150);
+
+    function onAgeGroupChange() {
+      const group = document.getElementById('ageGroup').value;
+      const weightInput = document.getElementById('weight');
+      const svgAdult = document.getElementById('svgAdult');
+      const svgChild = document.getElementById('svgChild');
+
+      clearAll();
+
+      if (group === 'child') {
+        svgAdult.style.display = 'none';
+        svgChild.style.display = 'block';
+        if (parseFloat(weightInput.value) >= 50) weightInput.value = 15;
+      } else {
+        svgAdult.style.display = 'block';
+        svgChild.style.display = 'none';
+        if (parseFloat(weightInput.value) < 30) weightInput.value = 70;
+      }
+
+      rasterizeOrgans();
+      updateCalc();
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      document.getElementById('btnModeOrgan').classList.toggle('active', mode === 'organ');
+      document.getElementById('btnModeDraw').classList.toggle('active', mode === 'draw');
+      document.getElementById('brushControl').classList.toggle('visible', mode === 'draw');
+      canvas.style.pointerEvents = (mode === 'draw') ? 'auto' : 'none';
+    }
+    setMode('organ');
+
+    function handleOrganClick(id) {
+      if (currentMode !== 'organ') return;
+      const el = document.getElementById(id);
+      const organKey = el.getAttribute('data-organ');
+
+      if (selectedOrgans.has(organKey)) {
+        selectedOrgans.delete(organKey);
+        el.classList.remove('active');
+      } else {
+        selectedOrgans.add(organKey);
+        el.classList.add('active');
+      }
+      updateCalc();
+    }
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+
+    function startDraw(e) {
+      if (currentMode !== 'draw') return;
+      isDrawing = true;
+      const pos = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.9)';
+      ctx.lineWidth = currentBrushSize;
+      draw(e);
+    }
+
+    function draw(e) {
+      if (!isDrawing || currentMode !== 'draw') return;
+      const pos = getPos(e);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+    }
+
+    function stopDraw() {
+      if (isDrawing) {
+        isDrawing = false;
+        ctx.closePath();
+        updateCalc();
+      }
+    }
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    window.addEventListener('mouseup', stopDraw);
+
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); }, { passive: false });
+    window.addEventListener('touchend', stopDraw);
+
+    function clearAll() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      selectedOrgans.clear();
+      document.querySelectorAll('.organ').forEach(el => el.classList.remove('active'));
+      updateCalc();
+    }
+
+    function calculate() {
+      const group = document.getElementById('ageGroup').value;
+      const weight = parseFloat(document.getElementById('weight').value) || 0;
+      const weightsTable = ORGAN_WEIGHTS[group];
+
+      let organTbsa = 0;
+      selectedOrgans.forEach(key => {
+        organTbsa += (weightsTable[key] || 0);
+      });
+
+      const userImg = ctx.getImageData(0, 0, 360, 370).data;
+      const mapImg = hitCtx.getImageData(0, 0, 360, 370).data;
+      const burnedPixelsPerOrgan = {};
+
+      for (let i = 0; i < userImg.length; i += 4) {
+        const userAlpha = userImg[i + 3];
+        if (userAlpha > 30) {
+          const r = mapImg[i];
+          if (r > 0) {
+            for (let key in ORGAN_COLORS) {
+              if (ORGAN_COLORS[key][0] === r) {
+                burnedPixelsPerOrgan[key] = (burnedPixelsPerOrgan[key] || 0) + 1;
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      let spotTbsa = 0;
+      for (let key in burnedPixelsPerOrgan) {
+        if (!selectedOrgans.has(key)) {
+          const totalPix = organTotalPixels[key] || 1;
+          const fractionBurned = Math.min(1, burnedPixelsPerOrgan[key] / totalPix);
+          const organMaxPercent = weightsTable[key] || 0;
+          spotTbsa += (fractionBurned * organMaxPercent);
+        }
+      }
+
+      organTbsa = parseFloat(organTbsa.toFixed(1));
+      spotTbsa = parseFloat(spotTbsa.toFixed(1));
+      let totalTbsa = Math.min(100, parseFloat((organTbsa + spotTbsa).toFixed(1)));
+
+      const totalFluid = 4 * weight * totalTbsa;
+      const rate8h = totalFluid > 0 ? (totalFluid / 2) / 8 : 0;
+
+      return { group, weight, organTbsa, spotTbsa, totalTbsa, totalFluid, rate8h };
+    }
+
+    function updateCalc() {
+      const c = calculate();
+      document.getElementById('metricsDisplay').innerHTML = `
+        درصد کل سوختگی (TBSA): <span class="highlight-val">${c.totalTbsa}%</span><br>
+        • اندام‌های کامل: <b>${c.organTbsa}%</b> | • لکه‌های موضعی: <b>${c.spotTbsa}%</b><br>
+        مایع ۲۴ ساعت اول: <span class="highlight-val">${Math.round(c.totalFluid).toLocaleString('fa-IR')}</span> سی‌سی رینگر<br>
+        سرعت تزریق ۸ ساعت اول: <span class="highlight-val">${Math.round(c.rate8h).toLocaleString('fa-IR')}</span> cc/hr
+      `;
+    }
+
+    function sendToBot() {
+      const data = calculate();
+      if (data.totalTbsa === 0) {
+        alert("لطفاً حداقل یک اندام یا لکه سوختگی را مشخص کنید.");
+        return;
+      }
+      if (tg) {
+        tg.sendData(JSON.stringify(data));
+      } else {
+        alert("این صفحه باید درون ربات تلگرام اجرا شود.");
+      }
+    }
+  </script>
+</body>
+</html>
