@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>آناتومی سوختگی پارکلند - پیکسلی با قلم متغیر</title>
+  <title>آناتومی سوختگی پارکلند</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root {
@@ -72,8 +72,6 @@
       color: #0b0f19;
       border-color: var(--accent);
     }
-    
-    /* کنترل اندازه قلم */
     .brush-control {
       display: none;
       align-items: center;
@@ -84,14 +82,8 @@
       border-radius: 8px;
       margin-bottom: 10px;
     }
-    .brush-control.visible {
-      display: flex;
-    }
-    .brush-slider {
-      flex: 1;
-      accent-color: var(--accent);
-      cursor: pointer;
-    }
+    .brush-control.visible { display: flex; }
+    .brush-slider { flex: 1; accent-color: var(--accent); cursor: pointer; }
     .brush-preview {
       width: 28px;
       height: 28px;
@@ -107,7 +99,6 @@
       border-radius: 50%;
       transition: width 0.1s, height 0.1s;
     }
-
     .canvas-wrapper {
       position: relative;
       width: 360px;
@@ -165,6 +156,7 @@
       cursor: pointer;
       margin-top: 8px;
     }
+    .submit-btn:active { transform: scale(0.98); }
   </style>
 </head>
 <body>
@@ -198,7 +190,6 @@
       </button>
     </div>
 
-    <!-- نوار تنظیم ضخامت قلم -->
     <div class="brush-control" id="brushControl">
       <label style="margin: 0; white-space: nowrap;">اندازه قلم:</label>
       <input type="range" id="brushSize" class="brush-slider" min="4" max="32" value="12" oninput="updateBrushSize()">
@@ -253,8 +244,8 @@
           <path id="ch_lower_back" data-organ="lower_back" class="organ" onclick="handleOrganClick('ch_lower_back')" d="M249,136 C260,137 280,137 291,136 C290,154 292,176 293,186 C281,188 259,188 247,186 C248,176 250,154 249,136 Z" />
           <path id="ch_arm_r_post" data-organ="arm_r_post" class="organ" onclick="handleOrganClick('ch_arm_r_post')" d="M244,88 C237,100 230,122 227,138 C224,152 221,168 219,176 C216,178 222,181 225,177 C228,168 233,148 237,135 C240,122 243,103 246,94 Z" />
           <path id="ch_arm_l_post" data-organ="arm_l_post" class="organ" onclick="handleOrganClick('ch_arm_l_post')" d="M296,88 C303,100 310,122 313,138 C316,152 319,168 321,176 C324,178 318,181 315,177 C312,168 307,148 303,135 C300,122 297,103 294,94 Z" />
-          <path id="ch_leg_r_post" data-organ="leg_r_post" class="organ" onclick="handleOrganClick('ch_leg_r_post')" d="M247,190 C258,190 264,193 266,206 C267,230 265,258 263,278 C262,298 263,316 263,322 C258,324 250,324 247,319 C248,308 249,286 248,266 C247,242 241,218 243,203 C244,195 245,191 247,190 Z" />
-          <path id="ch_leg_l_post" data-organ="leg_l_post" class="organ" onclick="handleOrganClick('ch_leg_l_post')" d="M293,190 C282,190 276,193 274,206 C273,230 275,258 277,278 C278,298 277,316 277,322 C282,324 290,324 293,319 C292,308 291,286 292,266 C293,242 299,218 297,203 C296,195 295,191 293,190 Z" />
+          <path id="ch_leg_r_post" data-organ="leg_r_post" class="organ" onclick="handleOrganClick('ch_leg_r_post')" d="M247,190 C258,190 264,193 266,206 C267,230 265,258 263,278 C262,298 263,316 263,322 C258,324 250,324 247,319 C248,308 249,286 248,264 C247,236 241,218 243,203 C244,195 245,191 247,190 Z" />
+          <path id="ch_leg_l_post" data-organ="leg_l_post" class="organ" onclick="handleOrganClick('ch_leg_l_post')" d="M293,190 C282,190 276,193 274,206 C273,230 275,258 277,278 C278,298 277,316 277,322 C282,324 290,324 293,319 C292,308 291,286 292,264 C293,242 299,218 297,203 C296,195 295,191 293,190 Z" />
         </g>
       </svg>
 
@@ -274,7 +265,10 @@
 
   <script>
     const tg = window.Telegram?.WebApp;
-    if (tg) tg.expand();
+    if (tg) {
+      tg.ready();
+      tg.expand();
+    }
 
     let currentMode = 'organ';
     const selectedOrgans = new Set();
@@ -356,7 +350,7 @@
       }
     }
 
-    setTimeout(rasterizeOrgans, 150);
+    setTimeout(rasterizeOrgans, 200);
 
     function onAgeGroupChange() {
       const group = document.getElementById('ageGroup').value;
@@ -515,12 +509,27 @@
 
     function sendToBot() {
       const data = calculate();
-      if (data.totalTbsa === 0) {
-        alert("لطفاً حداقل یک اندام یا لکه سوختگی را مشخص کنید.");
+
+      if (!data.totalTbsa || data.totalTbsa <= 0) {
+        alert("لطفاً حداقل یک بخش از بدن یا یک لکه سوختگی را مشخص کنید.");
         return;
       }
-      if (tg) {
-        tg.sendData(JSON.stringify(data));
+
+      const payload = JSON.stringify({
+        group: data.group,
+        weight: Number(data.weight),
+        organTbsa: Number(data.organTbsa),
+        spotTbsa: Number(data.spotTbsa),
+        totalTbsa: Number(data.totalTbsa),
+        totalFluid: Math.round(data.totalFluid)
+      });
+
+      if (window.Telegram && window.Telegram.WebApp) {
+        try {
+          window.Telegram.WebApp.sendData(payload);
+        } catch (err) {
+          alert("خطا در ارسال داده: " + err.message);
+        }
       } else {
         alert("این صفحه باید درون ربات تلگرام اجرا شود.");
       }
