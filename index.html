@@ -6,13 +6,12 @@
   <title>آناتومی سوختگی پارکلند</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   
-  <!-- فونت مدرن و زیبای فارسی Vazirmatn -->
+  <!-- فونت وزیرمتن -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 
   <style>
-    /* تم تیره (پیش‌فرض) */
     :root {
       --bg: #0b0f19;
       --card-bg: #151d30;
@@ -28,7 +27,6 @@
       --theme-btn-text: #f1f5f9;
     }
 
-    /* تم روشن */
     body.light-mode {
       --bg: #f8fafc;
       --card-bg: #ffffff;
@@ -226,19 +224,20 @@
       color: white;
       border: none;
       border-radius: 10px;
-      padding: 11px;
+      padding: 12px;
       font-size: 15.5px;
       font-weight: 700;
       cursor: pointer;
       margin-top: 8px;
-      box-shadow: 0 4px 6px -1px rgba(3, 105, 161, 0.25);
     }
-    .submit-btn:active { transform: scale(0.98); }
+    .submit-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
 
-  <!-- نوار بالایی همراه با دکمه تم -->
   <div class="top-bar">
     <div class="app-title">🩺 نقشه تعاملی سوختگی</div>
     <button class="theme-toggle-btn" onclick="toggleTheme()" id="themeBtn">
@@ -264,15 +263,9 @@
 
   <div class="panel">
     <div class="mode-bar">
-      <button class="mode-btn active" id="btnModeOrgan" onclick="setMode('organ')">
-        ✋ انتخاب کل اندام
-      </button>
-      <button class="mode-btn" id="btnModeDraw" onclick="setMode('draw')">
-        ✏️ کشیدن لکه / موضعی
-      </button>
-      <button class="mode-btn" style="flex: 0.5; color: #ef4444;" onclick="clearAll()">
-        🗑 پاک
-      </button>
+      <button class="mode-btn active" id="btnModeOrgan" onclick="setMode('organ')">✋ انتخاب اندام</button>
+      <button class="mode-btn" id="btnModeDraw" onclick="setMode('draw')">✏️ کشیدن موضعی</button>
+      <button class="mode-btn" style="flex: 0.5; color: #ef4444;" onclick="clearAll()">🗑 پاک</button>
     </div>
 
     <div class="brush-control" id="brushControl">
@@ -284,7 +277,6 @@
     </div>
 
     <div class="canvas-wrapper">
-      <!-- وکتور بزرگسالان -->
       <svg id="svgAdult" class="svg-layer" viewBox="0 0 360 370">
         <g id="frontAdult">
           <text x="90" y="16" class="tag" style="fill:#38bdf8;">بزرگسال - قدامی</text>
@@ -309,7 +301,6 @@
         </g>
       </svg>
 
-      <!-- وکتور اطفال -->
       <svg id="svgChild" class="svg-layer" viewBox="0 0 360 370" style="display: none;">
         <g id="frontChild">
           <text x="90" y="16" class="tag" style="fill:#f59e0b;">اطفال - قدامی</text>
@@ -355,7 +346,6 @@
       tg.expand();
     }
 
-    // مدیریت تم روشن / تیره
     function toggleTheme() {
       const isLight = document.body.classList.toggle('light-mode');
       const icon = document.getElementById('themeIcon');
@@ -371,7 +361,6 @@
       }
     }
 
-    // خواندن تم ذخیره شده یا هماهنگی با تلگرام
     const savedTheme = localStorage.getItem('burn_theme');
     if (savedTheme === 'light' || (tg && tg.colorScheme === 'light' && !savedTheme)) {
       document.body.classList.add('light-mode');
@@ -616,7 +605,8 @@
       `;
     }
 
-    function sendToBot() {
+    // ارسال قطعی و مستقیم داده از طریق ربات تلگرام
+    async function sendToBot() {
       const data = calculate();
 
       if (!data.totalTbsa || data.totalTbsa <= 0) {
@@ -624,47 +614,77 @@
         return;
       }
 
-      const payloadObj = {
-        group: data.group,
-        weight: Number(data.weight),
-        organTbsa: Number(data.organTbsa),
-        spotTbsa: Number(data.spotTbsa),
-        totalTbsa: Number(data.totalTbsa),
-        totalFluid: Math.round(data.totalFluid)
-      };
-      const payloadString = JSON.stringify(payloadObj);
+      const btn = document.getElementById('btnSubmit');
+      btn.disabled = true;
+      btn.textContent = "⏳ در حال ارسال به چت ربات...";
 
-      if (!window.Telegram || !window.Telegram.WebApp) {
-        alert("این برنامه باید داخل ربات تلگرام اجرا شود.");
-        return;
-      }
+      const groupName = data.group === 'adult' ? "بزرگسال" : "اطفال";
+      const first8h = data.totalFluid / 2;
+      const next16h = data.totalFluid / 2;
+      const rate8h = first8h > 0 ? (first8h / 8) : 0;
+      const rate16h = next16h > 0 ? (next16h / 16) : 0;
 
-      const webApp = window.Telegram.WebApp;
+      const reportMessage = 
+        `📊 <b>نتیجه محاسبه احیای مایع سوختگی (Parkland Formula)</b>\n` +
+        `────────────────────\n` +
+        `• <b>رده بیمار:</b> ${groupName}\n` +
+        `• <b>وزن بیمار:</b> ${data.weight} کیلوگرم\n` +
+        `• <b>سوختگی اندام‌های کامل:</b> ${data.organTbsa}٪\n` +
+        `• <b>سوختگی لکه‌های موضعی:</b> ${data.spotTbsa}٪\n` +
+        `• <b>کل سطح سوختگی (TBSA):</b> <b>${data.totalTbsa}٪</b>\n\n` +
+        `💧 <b>کل سرم رینگر لاکتات ۲۴ ساعت اول:</b>\n` +
+        `<blockquote>👉 <code>${Math.round(data.totalFluid).toLocaleString()} mL</code></blockquote>\n\n` +
+        `⏱ <b>برنامه و سرعت تزریق:</b>\n` +
+        `۱. <b>۸ ساعت اول:</b> ${Math.round(first8h).toLocaleString()} میلی‌لیتر (با سرعت <b>${Math.round(rate8h)} mL/h</b>)\n` +
+        `۲. <b>۱۶ ساعت دوم:</b> ${Math.round(next16h).toLocaleString()} میلی‌لیتر (با سرعت <b>${Math.round(rate16h)} mL/h</b>)\n` +
+        `────────────────────\n` +
+        `⚠️ <i>مبدا زمانی ۸ ساعت اول، دقیقاً از لحظه وقوع تروما محاسبه می‌شود.</i>`;
 
-      let sentViaSendData = false;
-      try {
-        if (typeof webApp.sendData === 'function') {
-          webApp.sendData(payloadString);
-          sentViaSendData = true;
-        }
-      } catch (err) {
-        console.warn("sendData پشتیبانی نشد:", err);
-      }
+      // روش ۱: ارسال مستقیم از طریق API رسمی تلگرام با استفاده از شناسه کاربری
+      const user = tg?.initDataUnsafe?.user;
+      const botToken = "8913764906:AAGK4yss6Ic0i0M1hlcIti3rVxlAtWmoAjk";
 
-      if (!sentViaSendData) {
+      if (user && user.id) {
         try {
-          const summaryText = `burn:${payloadString}`;
-          if (typeof webApp.switchInlineQuery === 'function') {
-            webApp.switchInlineQuery(summaryText, ['users', 'bots']);
-          } else {
-            navigator.clipboard.writeText(summaryText).then(() => {
-              alert("اطلاعات محاسبه کپی شد. لطفاً در چت ربات Paste و ارسال کنید.");
-              webApp.close();
-            });
+          const resp = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: user.id,
+              text: reportMessage,
+              parse_mode: 'HTML',
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: "🏠 منوی اصلی", callback_data: "back_main" }]
+                ]
+              }
+            })
+          });
+
+          if (resp.ok) {
+            tg.close();
+            return;
           }
         } catch (e) {
-          alert("خطا در انتقال اطلاعات: " + e.message);
+          console.error("API send failed:", e);
         }
+      }
+
+      // روش ۲: تلاش برای متد استاندارد کیبورد معمولی در صورت وجود
+      try {
+        const payloadObj = {
+          group: data.group,
+          weight: Number(data.weight),
+          organTbsa: Number(data.organTbsa),
+          spotTbsa: Number(data.spotTbsa),
+          totalTbsa: Number(data.totalTbsa),
+          totalFluid: Math.round(data.totalFluid)
+        };
+        tg.sendData(JSON.stringify(payloadObj));
+      } catch (e) {
+        btn.disabled = false;
+        btn.textContent = "ارسال اطلاعات به ربات";
+        alert("لطفاً یکبار ربات را Start کنید یا از داخل تلگرام وارد شوید.");
       }
     }
   </script>
