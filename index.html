@@ -174,7 +174,7 @@
       color: white;
       border: none;
       border-radius: 10px;
-      padding: 10px;
+      padding: 11px;
       font-size: 16px;
       font-weight: bold;
       cursor: pointer;
@@ -284,7 +284,7 @@
       مایع ۲۴ ساعت اول: <span class="highlight-val">۰</span> سی‌سی رینگر<br>
       سرعت تزریق ۸ ساعت اول: <span class="highlight-val">۰</span> cc/hr
     </div>
-    <button class="submit-btn" onclick="sendToBot()">ارسال اطلاعات به ربات</button>
+    <button class="submit-btn" id="btnSubmit" onclick="sendToBot()">ارسال اطلاعات به ربات</button>
   </div>
 
   <script>
@@ -539,23 +539,54 @@
         return;
       }
 
-      const payload = JSON.stringify({
+      const payloadObj = {
         group: data.group,
         weight: Number(data.weight),
         organTbsa: Number(data.organTbsa),
         spotTbsa: Number(data.spotTbsa),
         totalTbsa: Number(data.totalTbsa),
         totalFluid: Math.round(data.totalFluid)
-      });
+      };
+      const payloadString = JSON.stringify(payloadObj);
 
-      if (window.Telegram && window.Telegram.WebApp) {
-        try {
-          window.Telegram.WebApp.sendData(payload);
-        } catch (err) {
-          alert("خطا در ارسال داده: " + err.message);
+      // بررسی باز شدن در بستر تلگرام
+      if (!window.Telegram || !window.Telegram.WebApp) {
+        alert("این برنامه باید داخل ربات تلگرام اجرا شود.");
+        return;
+      }
+
+      const webApp = window.Telegram.WebApp;
+
+      // ۱. اگر از کیبورد پایین باز شده باشد، sendData مستقیماً جواب می‌دهد
+      let sentViaSendData = false;
+      try {
+        if (typeof webApp.sendData === 'function') {
+          webApp.sendData(payloadString);
+          sentViaSendData = true;
         }
-      } else {
-        alert("این صفحه باید درون ربات تلگرام اجرا شود.");
+      } catch (err) {
+        console.warn("sendData پشتیبانی نشد (باز شده از دکمه شیشه‌ای):", err);
+      }
+
+      // ۲. اگر از دکمه اینلاین/شیشه‌ای باز شده باشد
+      if (!sentViaSendData) {
+        try {
+          // گزارش خوانا برای نمایش فوری
+          const summaryText = `burn:${payloadString}`;
+
+          // انتقال متن به باکس پیام و بستن وب‌اپ
+          if (typeof webApp.switchInlineQuery === 'function') {
+            webApp.switchInlineQuery(summaryText, ['users', 'bots']);
+          } else {
+            // کپی در کلیپ‌بورد در صورت عدم پشتیبانی مرورگر کاربر
+            navigator.clipboard.writeText(summaryText).then(() => {
+              alert("اطلاعات محاسبه کپی شد. لطفاً در چت ربات Paste و ارسال کنید.");
+              webApp.close();
+            });
+          }
+        } catch (e) {
+          alert("خطا در انتقال اطلاعات: " + e.message);
+        }
       }
     }
   </script>
