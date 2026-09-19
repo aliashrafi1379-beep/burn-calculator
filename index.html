@@ -144,6 +144,29 @@
       border-color: var(--accent);
     }
 
+    /* نوار فوکوس و دسترسی سریع */
+    .focus-bar {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .focus-btn {
+      flex: 1;
+      padding: 5px 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      border-radius: 7px;
+      border: 1px solid var(--border-color);
+      background: var(--input-bg);
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .focus-btn:active { transform: scale(0.96); }
+
     .brush-control {
       display: none;
       align-items: center;
@@ -172,7 +195,6 @@
       transition: width 0.1s, height 0.1s;
     }
 
-    /* کانتینر برش و زوم */
     .viewport-box {
       position: relative;
       width: 360px;
@@ -213,7 +235,6 @@
       z-index: 2;
     }
 
-    /* دکمه‌های کنترل زوم */
     .zoom-toolbar {
       position: absolute;
       bottom: 8px;
@@ -326,6 +347,13 @@
       <button class="mode-btn" style="flex: 0.5; color: #ef4444;" onclick="clearAll()">🗑 پاک</button>
     </div>
 
+    <!-- دکمه‌های فوکوس خودکار روی نمای قدامی و خلفی -->
+    <div class="focus-bar">
+      <button class="focus-btn" onclick="focusView('front')">🔍 زوم نمای قدامی (روبرو)</button>
+      <button class="focus-btn" onclick="focusView('back')">🔍 زوم نمای خلفی (پشت)</button>
+      <button class="focus-btn" style="flex: 0.6;" onclick="resetZoom()">نمای کامل</button>
+    </div>
+
     <div class="brush-control" id="brushControl">
       <label style="margin: 0; white-space: nowrap;">اندازه قلم:</label>
       <input type="range" id="brushSize" class="brush-slider" min="4" max="32" value="12" oninput="updateBrushSize()">
@@ -334,13 +362,13 @@
       </div>
     </div>
 
-    <!-- کادر آناتومی و بستر زوم -->
+    <!-- کادر آناتومی با زوم دو جهته دقیق -->
     <div class="viewport-box" id="viewportBox">
       <div class="zoom-level-badge" id="zoomBadge">1.0x</div>
       
       <div class="zoom-toolbar">
-        <button class="zoom-btn" onclick="applyZoom(0.35)" title="بزرگنمایی">+</button>
-        <button class="zoom-btn" onclick="applyZoom(-0.35)" title="کوچکنمایی">−</button>
+        <button class="zoom-btn" onclick="applyZoomBtn(0.4)" title="بزرگنمایی">+</button>
+        <button class="zoom-btn" onclick="applyZoomBtn(-0.4)" title="کوچکنمایی">−</button>
         <button class="zoom-btn" onclick="resetZoom()" title="تنظیم مجدد" style="font-size: 14px;">↺</button>
       </div>
 
@@ -388,7 +416,7 @@
             <path id="ch_lower_back" data-organ="lower_back" class="organ" onclick="handleOrganClick('ch_lower_back')" d="M249,136 C260,137 280,137 291,136 C290,154 292,176 293,186 C281,188 259,188 247,186 C248,176 250,154 249,136 Z" />
             <path id="ch_arm_r_post" data-organ="arm_r_post" class="organ" onclick="handleOrganClick('ch_arm_r_post')" d="M244,88 C237,100 230,122 227,138 C224,152 221,168 219,176 C216,178 222,181 225,177 C228,168 233,148 237,135 C240,122 243,103 246,94 Z" />
             <path id="ch_arm_l_post" data-organ="arm_l_post" class="organ" onclick="handleOrganClick('ch_arm_l_post')" d="M296,88 C303,100 310,122 313,138 C316,152 319,168 321,176 C324,178 318,181 315,177 C312,168 307,148 303,135 C300,122 297,103 294,94 Z" />
-            <path id="ch_leg_r_post" data-organ="leg_r_post" class="organ" onclick="handleOrganClick('ch_leg_r_post')" d="M247,190 C258,190 264,193 266,206 C267,230 265,258 263,278 C262,298 263,316 263,322 C258,324 250,324 247,319 C248,308 249,286 248,264 C247,236 241,218 243,203 C244,195 245,191 247,190 Z" />
+            <path id="ch_leg_r_post" data-organ="leg_r_post" class="organ" onclick="handleOrganClick('ch_leg_r_post')" d="M247,190 C258,190 264,193 266,206 C267,230 265,258 263,278 C262,298 263,316 263,322 C258,324 250,324 247,319 C248,308 249,286 248,266 C247,242 241,218 243,203 C244,195 245,191 247,190 Z" />
             <path id="ch_leg_l_post" data-organ="leg_l_post" class="organ" onclick="handleOrganClick('ch_leg_l_post')" d="M293,190 C282,190 276,193 274,206 C273,230 275,258 277,278 C278,298 277,316 277,322 C282,324 290,324 293,319 C292,308 291,286 292,266 C293,242 299,218 297,203 C296,195 295,191 293,190 Z" />
           </g>
         </svg>
@@ -447,24 +475,22 @@
     const ctx = canvas.getContext('2d');
     let isDrawing = false;
 
-    // متغیرهای مدیریت زوم و جابجایی
+    // متغیرهای زوم و جابجایی
     let scale = 1.0;
     let panX = 0;
     let panY = 0;
     const minScale = 1.0;
     const maxScale = 3.5;
 
-    // متغیرهای لمس دو انگشتی
-    let isPanning = false;
-    let startDist = 0;
-    let startScale = 1.0;
-    let startTouchX = 0;
-    let startTouchY = 0;
-    let startPanX = 0;
-    let startPanY = 0;
+    // پینچ لمسی
+    let isPinchPanning = false;
+    let initialPinchDist = 0;
+    let initialPinchScale = 1.0;
+    let initialPinchCenterCanvas = { x: 0, y: 0 };
+    let initialTouchCenter = { x: 0, y: 0 };
+    let initialPan = { x: 0, y: 0 };
 
-    function updateTransform() {
-      // محدود کردن pan به مرزهای کادر
+    function clampPan() {
       const maxPanX = 0;
       const minPanX = 360 - 360 * scale;
       const maxPanY = 0;
@@ -472,16 +498,33 @@
 
       panX = Math.min(maxPanX, Math.max(minPanX, panX));
       panY = Math.min(maxPanY, Math.max(minPanY, panY));
+    }
 
+    function updateTransform() {
+      clampPan();
       zoomWrapper.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
       document.getElementById('zoomBadge').textContent = `${scale.toFixed(1)}x`;
     }
 
-    function applyZoom(delta) {
+    // فوکوس سریع با یک کلیک روی نمای قدامی یا خلفی
+    function focusView(side) {
+      scale = 1.95;
+      if (side === 'front') {
+        // متمرکز بر قدامی (سمت چپ بوم)
+        panX = 0;
+        panY = -25;
+      } else {
+        // متمرکز بر خلفی (سمت راست بوم)
+        panX = -360 * (scale - 1);
+        panY = -25;
+      }
+      updateTransform();
+    }
+
+    function applyZoomBtn(delta) {
       const newScale = Math.min(maxScale, Math.max(minScale, scale + delta));
       if (newScale === scale) return;
 
-      // زوم به مرکز تصویر
       const cx = 180;
       const cy = 185;
       panX = cx - (cx - panX) * (newScale / scale);
@@ -623,14 +666,16 @@
       updateCalc();
     }
 
-    // محاسبه مختصات دقیق روی بوم اصلی (با لحاظ Scale و Pan)
+    // تبدیل موقعیت کلیک به مختصات بوم (Canvas)
     function getCanvasCoordinates(clientX, clientY) {
       const rect = viewportBox.getBoundingClientRect();
       const vx = clientX - rect.left;
       const vy = clientY - rect.top;
       return {
         x: Math.round((vx - panX) / scale),
-        y: Math.round((vy - panY) / scale)
+        y: Math.round((vy - panY) / scale),
+        viewportX: vx,
+        viewportY: vy
       };
     }
 
@@ -640,7 +685,7 @@
       return pixel[0] > 0;
     }
 
-    // رویدادهای ماوس (برای دسکتاپ)
+    // رویدادهای ماوس
     viewportBox.addEventListener('mousedown', (e) => {
       if (currentMode !== 'draw') return;
       const pos = getCanvasCoordinates(e.clientX, e.clientY);
@@ -678,24 +723,39 @@
       }
     });
 
-    // رویدادهای لمسی (موبایل و تبلت - پینچ زوم و رسم مجزا)
     function getTouchDist(t1, t2) {
       const dx = t1.clientX - t2.clientX;
       const dy = t1.clientY - t2.clientY;
-      return Math.sqrt(dx * dx + dy * dy);
+      return Math.hypot(dx, dy);
     }
 
+    // رویدادهای لمسی با تمرکز بر مکان دو انگشت
     viewportBox.addEventListener('touchstart', (e) => {
       if (e.touches.length === 2) {
-        // شروع پینچ زوم و جابجایی دو انگشتی
         isDrawing = false;
-        isPanning = true;
-        startDist = getTouchDist(e.touches[0], e.touches[1]);
-        startScale = scale;
-        startTouchX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-        startTouchY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-        startPanX = panX;
-        startPanY = panY;
+        isPinchPanning = true;
+
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        initialPinchDist = getTouchDist(t1, t2);
+        initialPinchScale = scale;
+
+        const rect = viewportBox.getBoundingClientRect();
+        const midClientX = (t1.clientX + t2.clientX) / 2;
+        const midClientY = (t1.clientY + t2.clientY) / 2;
+        
+        initialTouchCenter = {
+          x: midClientX - rect.left,
+          y: midClientY - rect.top
+        };
+
+        // نقطه بوم زیر دو انگشت
+        initialPinchCenterCanvas = {
+          x: (initialTouchCenter.x - panX) / scale,
+          y: (initialTouchCenter.y - panY) / scale
+        };
+
+        initialPan = { x: panX, y: panY };
         return;
       }
 
@@ -704,7 +764,7 @@
         const pos = getCanvasCoordinates(t.clientX, t.clientY);
         if (!isPixelOnBody(pos.x, pos.y)) {
           isDrawing = false;
-          return; // اجازه اسکرول عمودی به صفحه
+          return;
         }
 
         isDrawing = true;
@@ -720,17 +780,26 @@
     }, { passive: true });
 
     viewportBox.addEventListener('touchmove', (e) => {
-      if (isPanning && e.touches.length === 2) {
+      if (isPinchPanning && e.touches.length === 2) {
         if (e.cancelable) e.preventDefault();
-        const dist = getTouchDist(e.touches[0], e.touches[1]);
-        const curTouchX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-        const curTouchY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const currentDist = getTouchDist(t1, t2);
+        if (initialPinchDist === 0) return;
 
-        const newScale = Math.min(maxScale, Math.max(minScale, startScale * (dist / startDist)));
-        scale = newScale;
+        const rect = viewportBox.getBoundingClientRect();
+        const curTouchCenter = {
+          x: ((t1.clientX + t2.clientX) / 2) - rect.left,
+          y: ((t1.clientY + t2.clientY) / 2) - rect.top
+        };
 
-        panX = startPanX + (curTouchX - startTouchX);
-        panY = startPanY + (curTouchY - startTouchY);
+        const targetScale = Math.min(maxScale, Math.max(minScale, initialPinchScale * (currentDist / initialPinchDist)));
+        scale = targetScale;
+
+        // فرمول محاسبه مبدا زوم دقیقاً روی مکان باز شدن دو انگشت
+        panX = curTouchCenter.x - initialPinchCenterCanvas.x * scale;
+        panY = curTouchCenter.y - initialPinchCenterCanvas.y * scale;
+
         updateTransform();
         return;
       }
@@ -751,7 +820,7 @@
     }, { passive: false });
 
     window.addEventListener('touchend', (e) => {
-      if (e.touches.length < 2) isPanning = false;
+      if (e.touches.length < 2) isPinchPanning = false;
       if (isDrawing && e.touches.length === 0) {
         isDrawing = false;
         ctx.closePath();
