@@ -2,7 +2,7 @@
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.5">
   <title>آناتومی سوختگی پارکلند</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   
@@ -104,6 +104,7 @@
       margin-bottom: 10px;
       border: 1px solid var(--border-color);
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      position: relative;
     }
 
     .input-row { display: flex; gap: 10px; }
@@ -171,13 +172,29 @@
       transition: width 0.1s, height 0.1s;
     }
 
-    .canvas-wrapper {
+    /* کانتینر برش و زوم */
+    .viewport-box {
       position: relative;
       width: 360px;
       height: 370px;
       margin: 0 auto;
-      touch-action: pan-y; /* اجازه اسکرول عمودی بدون قفل شدن صفحه */
+      overflow: hidden;
+      border-radius: 12px;
+      border: 1px dashed var(--border-color);
+      background: var(--input-bg);
+      touch-action: pan-y;
     }
+
+    .zoom-wrapper {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 360px;
+      height: 370px;
+      transform-origin: 0 0;
+      touch-action: none;
+    }
+
     .svg-layer {
       position: absolute;
       top: 0;
@@ -185,8 +202,8 @@
       width: 100%;
       height: 100%;
       z-index: 1;
-      pointer-events: auto;
     }
+
     #drawCanvas {
       position: absolute;
       top: 0;
@@ -194,7 +211,49 @@
       width: 100%;
       height: 100%;
       z-index: 2;
-      touch-action: pan-y; /* اجازه اسکرول */
+    }
+
+    /* دکمه‌های کنترل زوم */
+    .zoom-toolbar {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .zoom-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--text);
+      border: 1px solid var(--border-color);
+      font-size: 17px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    }
+    .zoom-btn:active { transform: scale(0.92); }
+
+    .zoom-level-badge {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      z-index: 10;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(4px);
+      color: #38bdf8;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
     }
 
     .organ {
@@ -275,56 +334,67 @@
       </div>
     </div>
 
-    <div class="canvas-wrapper">
-      <svg id="svgAdult" class="svg-layer" viewBox="0 0 360 370">
-        <g id="frontAdult">
-          <text x="90" y="16" class="tag" style="fill:#38bdf8;">بزرگسال - قدامی</text>
-          <path id="ad_head_ant" data-organ="head_ant" class="organ" onclick="handleOrganClick('ad_head_ant')" d="M90,24 C100,24 108,34 107,46 C106,56 99,64 90,65 C81,64 74,56 73,46 C72,34 80,24 90,24 Z" />
-          <path id="ad_chest" data-organ="chest" class="organ" onclick="handleOrganClick('ad_chest')" d="M70,72 C77,70 103,70 110,72 C113,88 112,108 108,118 C98,119 82,119 72,118 C68,108 67,88 70,72 Z" />
-          <path id="ad_abdomen" data-organ="abdomen" class="organ" onclick="handleOrganClick('ad_abdomen')" d="M72,120 C82,121 98,121 108,120 C106,133 109,150 111,162 C100,164 80,164 69,162 C71,150 74,133 72,120 Z" />
-          <path id="ad_arm_r_ant" data-organ="arm_r_ant" class="organ" onclick="handleOrganClick('ad_arm_r_ant')" d="M66,74 C59,86 53,110 50,126 C46,142 42,162 40,172 C37,174 43,177 46,173 C50,163 56,140 60,124 C62,110 66,90 69,80 Z" />
-          <path id="ad_arm_l_ant" data-organ="arm_l_ant" class="organ" onclick="handleOrganClick('ad_arm_l_ant')" d="M114,74 C121,86 127,110 130,126 C134,142 138,162 140,172 C143,174 137,177 134,173 C130,163 124,140 120,124 C118,110 114,90 111,80 Z" />
-          <polygon id="ad_genital" data-organ="genital" class="organ" onclick="handleOrganClick('ad_genital')" points="83,165 97,165 90,178" />
-          <path id="ad_leg_r_ant" data-organ="leg_r_ant" class="organ" onclick="handleOrganClick('ad_leg_r_ant')" d="M69,166 C80,166 85,169 87,183 C89,212 86,244 84,266 C83,288 84,320 84,330 C79,332 70,332 67,326 C68,314 69,286 68,264 C67,236 62,201 64,181 C65,172 67,167 69,166 Z" />
-          <path id="ad_leg_l_ant" data-organ="leg_l_ant" class="organ" onclick="handleOrganClick('ad_leg_l_ant')" d="M111,166 C100,166 95,169 93,183 C91,212 94,244 96,266 C97,288 96,320 96,330 C101,332 110,332 113,326 C112,314 111,286 112,264 C113,236 118,201 116,181 C115,172 113,167 111,166 Z" />
-        </g>
-        <g id="backAdult">
-          <text x="270" y="16" class="tag" style="fill:#38bdf8;">بزرگسال - خلفی</text>
-          <path id="ad_head_post" data-organ="head_post" class="organ" onclick="handleOrganClick('ad_head_post')" d="M270,24 C280,24 288,34 287,46 C286,56 279,64 270,65 C261,64 254,56 253,46 C252,34 260,24 270,24 Z" />
-          <path id="ad_upper_back" data-organ="upper_back" class="organ" onclick="handleOrganClick('ad_upper_back')" d="M250,72 C257,70 283,70 290,72 C293,88 292,108 288,118 C278,119 262,119 252,118 C248,108 247,88 250,72 Z" />
-          <path id="ad_lower_back" data-organ="lower_back" class="organ" onclick="handleOrganClick('ad_lower_back')" d="M252,120 C262,121 278,121 288,120 C287,137 290,157 291,165 C280,167 260,167 249,165 C250,157 253,137 252,120 Z" />
-          <path id="ad_arm_r_post" data-organ="arm_r_post" class="organ" onclick="handleOrganClick('ad_arm_r_post')" d="M246,74 C239,86 233,110 230,126 C226,142 222,162 220,172 C217,174 223,177 226,173 C230,163 236,140 240,124 C242,110 246,90 249,80 Z" />
-          <path id="ad_arm_l_post" data-organ="arm_l_post" class="organ" onclick="handleOrganClick('ad_arm_l_post')" d="M294,74 C301,86 307,110 310,126 C314,142 318,162 320,172 C323,174 317,177 314,173 C310,163 304,140 300,124 C298,110 294,90 291,80 Z" />
-          <path id="ad_leg_r_post" data-organ="leg_r_post" class="organ" onclick="handleOrganClick('ad_leg_r_post')" d="M249,168 C260,168 265,170 267,183 C269,212 266,244 264,266 C263,288 264,320 264,330 C259,332 250,332 247,326 C248,314 249,286 248,264 C247,236 242,201 244,181 C245,172 247,169 249,168 Z" />
-          <path id="ad_leg_l_post" data-organ="leg_l_post" class="organ" onclick="handleOrganClick('ad_leg_l_post')" d="M291,168 C280,168 275,170 273,183 C271,212 274,244 276,266 C277,288 276,320 276,330 C281,332 290,332 293,326 C292,314 291,286 292,264 C293,236 298,201 296,181 C295,172 293,169 291,168 Z" />
-        </g>
-      </svg>
+    <!-- کادر آناتومی و بستر زوم -->
+    <div class="viewport-box" id="viewportBox">
+      <div class="zoom-level-badge" id="zoomBadge">1.0x</div>
+      
+      <div class="zoom-toolbar">
+        <button class="zoom-btn" onclick="applyZoom(0.35)" title="بزرگنمایی">+</button>
+        <button class="zoom-btn" onclick="applyZoom(-0.35)" title="کوچکنمایی">−</button>
+        <button class="zoom-btn" onclick="resetZoom()" title="تنظیم مجدد" style="font-size: 14px;">↺</button>
+      </div>
 
-      <svg id="svgChild" class="svg-layer" viewBox="0 0 360 370" style="display: none;">
-        <g id="frontChild">
-          <text x="90" y="16" class="tag" style="fill:#f59e0b;">اطفال - قدامی</text>
-          <path id="ch_head_ant" data-organ="head_ant" class="organ" onclick="handleOrganClick('ch_head_ant')" d="M90,20 C105,20 116,33 115,52 C114,68 103,78 90,78 C77,78 66,68 65,52 C64,33 75,20 90,20 Z" />
-          <path id="ch_chest" data-organ="chest" class="organ" onclick="handleOrganClick('ch_chest')" d="M68,84 C76,82 104,82 112,84 C116,102 115,124 111,134 C100,135 80,135 69,134 C65,124 64,102 68,84 Z" />
-          <path id="ch_abdomen" data-organ="abdomen" class="organ" onclick="handleOrganClick('ch_abdomen')" d="M69,136 C80,137 100,137 111,136 C110,154 112,176 113,186 C101,188 79,188 67,186 C68,176 70,154 69,136 Z" />
-          <path id="ch_arm_r_ant" data-organ="arm_r_ant" class="organ" onclick="handleOrganClick('ch_arm_r_ant')" d="M64,88 C57,100 50,122 47,138 C44,152 41,168 39,176 C36,178 42,181 45,177 C48,168 53,148 57,135 C60,122 63,103 66,94 Z" />
-          <path id="ch_arm_l_ant" data-organ="arm_l_ant" class="organ" onclick="handleOrganClick('ch_arm_l_ant')" d="M116,88 C123,100 130,122 133,138 C136,152 139,168 141,176 C144,178 138,181 135,177 C132,168 127,148 123,135 C120,122 117,103 114,94 Z" />
-          <polygon id="ch_genital" data-organ="genital" class="organ" onclick="handleOrganClick('ch_genital')" points="83,188 97,188 90,200" />
-          <path id="ch_leg_r_ant" data-organ="leg_r_ant" class="organ" onclick="handleOrganClick('ch_leg_r_ant')" d="M67,190 C78,190 84,193 86,206 C87,230 85,258 83,278 C82,298 83,316 83,322 C78,324 70,324 67,319 C68,308 69,286 68,266 C67,242 61,218 63,203 C64,195 65,191 67,190 Z" />
-          <path id="ch_leg_l_ant" data-organ="leg_l_ant" class="organ" onclick="handleOrganClick('ch_leg_l_ant')" d="M113,190 C102,190 96,193 94,206 C93,230 95,258 97,278 C98,298 97,316 97,322 C102,324 110,324 113,319 C112,308 111,286 112,266 C113,242 119,218 117,203 C116,195 115,191 113,190 Z" />
-        </g>
-        <g id="backChild">
-          <text x="270" y="16" class="tag" style="fill:#f59e0b;">اطفال - خلفی</text>
-          <path id="ch_head_post" data-organ="head_post" class="organ" onclick="handleOrganClick('ch_head_post')" d="M270,20 C285,20 296,33 295,52 C294,68 283,78 270,78 C257,78 246,68 245,52 C244,33 255,20 270,20 Z" />
-          <path id="ch_upper_back" data-organ="upper_back" class="organ" onclick="handleOrganClick('ch_upper_back')" d="M248,84 C256,82 284,82 292,84 C296,102 295,124 291,134 C280,135 260,135 249,134 C245,124 244,102 248,84 Z" />
-          <path id="ch_lower_back" data-organ="lower_back" class="organ" onclick="handleOrganClick('ch_lower_back')" d="M249,136 C260,137 280,137 291,136 C290,154 292,176 293,186 C281,188 259,188 247,186 C248,176 250,154 249,136 Z" />
-          <path id="ch_arm_r_post" data-organ="arm_r_post" class="organ" onclick="handleOrganClick('ch_arm_r_post')" d="M244,88 C237,100 230,122 227,138 C224,152 221,168 219,176 C216,178 222,181 225,177 C228,168 233,148 237,135 C240,122 243,103 246,94 Z" />
-          <path id="ch_arm_l_post" data-organ="arm_l_post" class="organ" onclick="handleOrganClick('ch_arm_l_post')" d="M296,88 C303,100 310,122 313,138 C316,152 319,168 321,176 C324,178 318,181 315,177 C312,168 307,148 303,135 C300,122 297,103 294,94 Z" />
-          <path id="ch_leg_r_post" data-organ="leg_r_post" class="organ" onclick="handleOrganClick('ch_leg_r_post')" d="M247,190 C258,190 264,193 266,206 C267,230 265,258 263,278 C262,298 263,316 263,322 C258,324 250,324 247,319 C248,308 249,286 248,266 C247,242 241,218 243,203 C244,195 245,191 247,190 Z" />
-          <path id="ch_leg_l_post" data-organ="leg_l_post" class="organ" onclick="handleOrganClick('ch_leg_l_post')" d="M293,190 C282,190 276,193 274,206 C273,230 275,258 277,278 C278,298 277,316 277,322 C282,324 290,324 293,319 C292,308 291,286 292,266 C293,242 299,218 297,203 C296,195 295,191 293,190 Z" />
-        </g>
-      </svg>
+      <div class="zoom-wrapper" id="zoomWrapper">
+        <svg id="svgAdult" class="svg-layer" viewBox="0 0 360 370">
+          <g id="frontAdult">
+            <text x="90" y="16" class="tag" style="fill:#38bdf8;">بزرگسال - قدامی</text>
+            <path id="ad_head_ant" data-organ="head_ant" class="organ" onclick="handleOrganClick('ad_head_ant')" d="M90,24 C100,24 108,34 107,46 C106,56 99,64 90,65 C81,64 74,56 73,46 C72,34 80,24 90,24 Z" />
+            <path id="ad_chest" data-organ="chest" class="organ" onclick="handleOrganClick('ad_chest')" d="M70,72 C77,70 103,70 110,72 C113,88 112,108 108,118 C98,119 82,119 72,118 C68,108 67,88 70,72 Z" />
+            <path id="ad_abdomen" data-organ="abdomen" class="organ" onclick="handleOrganClick('ad_abdomen')" d="M72,120 C82,121 98,121 108,120 C106,133 109,150 111,162 C100,164 80,164 69,162 C71,150 74,133 72,120 Z" />
+            <path id="ad_arm_r_ant" data-organ="arm_r_ant" class="organ" onclick="handleOrganClick('ad_arm_r_ant')" d="M66,74 C59,86 53,110 50,126 C46,142 42,162 40,172 C37,174 43,177 46,173 C50,163 56,140 60,124 C62,110 66,90 69,80 Z" />
+            <path id="ad_arm_l_ant" data-organ="arm_l_ant" class="organ" onclick="handleOrganClick('ad_arm_l_ant')" d="M114,74 C121,86 127,110 130,126 C134,142 138,162 140,172 C143,174 137,177 134,173 C130,163 124,140 120,124 C118,110 114,90 111,80 Z" />
+            <polygon id="ad_genital" data-organ="genital" class="organ" onclick="handleOrganClick('ad_genital')" points="83,165 97,165 90,178" />
+            <path id="ad_leg_r_ant" data-organ="leg_r_ant" class="organ" onclick="handleOrganClick('ad_leg_r_ant')" d="M69,166 C80,166 85,169 87,183 C89,212 86,244 84,266 C83,288 84,320 84,330 C79,332 70,332 67,326 C68,314 69,286 68,264 C67,236 62,201 64,181 C65,172 67,167 69,166 Z" />
+            <path id="ad_leg_l_ant" data-organ="leg_l_ant" class="organ" onclick="handleOrganClick('ad_leg_l_ant')" d="M111,166 C100,166 95,169 93,183 C91,212 94,244 96,266 C97,288 96,320 96,330 C101,332 110,332 113,326 C112,314 111,286 112,264 C113,236 118,201 116,181 C115,172 113,167 111,166 Z" />
+          </g>
+          <g id="backAdult">
+            <text x="270" y="16" class="tag" style="fill:#38bdf8;">بزرگسال - خلفی</text>
+            <path id="ad_head_post" data-organ="head_post" class="organ" onclick="handleOrganClick('ad_head_post')" d="M270,24 C280,24 288,34 287,46 C286,56 279,64 270,65 C261,64 254,56 253,46 C252,34 260,24 270,24 Z" />
+            <path id="ad_upper_back" data-organ="upper_back" class="organ" onclick="handleOrganClick('ad_upper_back')" d="M250,72 C257,70 283,70 290,72 C293,88 292,108 288,118 C278,119 262,119 252,118 C248,108 247,88 250,72 Z" />
+            <path id="ad_lower_back" data-organ="lower_back" class="organ" onclick="handleOrganClick('ad_lower_back')" d="M252,120 C262,121 278,121 288,120 C287,137 290,157 291,165 C280,167 260,167 249,165 C250,157 253,137 252,120 Z" />
+            <path id="ad_arm_r_post" data-organ="arm_r_post" class="organ" onclick="handleOrganClick('ad_arm_r_post')" d="M246,74 C239,86 233,110 230,126 C226,142 222,162 220,172 C217,174 223,177 226,173 C230,163 236,140 240,124 C242,110 246,90 249,80 Z" />
+            <path id="ad_arm_l_post" data-organ="arm_l_post" class="organ" onclick="handleOrganClick('ad_arm_l_post')" d="M294,74 C301,86 307,110 310,126 C314,142 318,162 320,172 C323,174 317,177 314,173 C310,163 304,140 300,124 C298,110 294,90 291,80 Z" />
+            <path id="ad_leg_r_post" data-organ="leg_r_post" class="organ" onclick="handleOrganClick('ad_leg_r_post')" d="M249,168 C260,168 265,170 267,183 C269,212 266,244 264,266 C263,288 264,320 264,330 C259,332 250,332 247,326 C248,314 249,286 248,264 C247,236 242,201 244,181 C245,172 247,169 249,168 Z" />
+            <path id="ad_leg_l_post" data-organ="leg_l_post" class="organ" onclick="handleOrganClick('ad_leg_l_post')" d="M291,168 C280,168 275,170 273,183 C271,212 274,244 276,266 C277,288 276,320 276,330 C281,332 290,332 293,326 C292,314 291,286 292,264 C293,236 298,201 296,181 C295,172 293,169 291,168 Z" />
+          </g>
+        </svg>
 
-      <canvas id="drawCanvas" width="360" height="370"></canvas>
+        <svg id="svgChild" class="svg-layer" viewBox="0 0 360 370" style="display: none;">
+          <g id="frontChild">
+            <text x="90" y="16" class="tag" style="fill:#f59e0b;">اطفال - قدامی</text>
+            <path id="ch_head_ant" data-organ="head_ant" class="organ" onclick="handleOrganClick('ch_head_ant')" d="M90,20 C105,20 116,33 115,52 C114,68 103,78 90,78 C77,78 66,68 65,52 C64,33 75,20 90,20 Z" />
+            <path id="ch_chest" data-organ="chest" class="organ" onclick="handleOrganClick('ch_chest')" d="M68,84 C76,82 104,82 112,84 C116,102 115,124 111,134 C100,135 80,135 69,134 C65,124 64,102 68,84 Z" />
+            <path id="ch_abdomen" data-organ="abdomen" class="organ" onclick="handleOrganClick('ch_abdomen')" d="M69,136 C80,137 100,137 111,136 C110,154 112,176 113,186 C101,188 79,188 67,186 C68,176 70,154 69,136 Z" />
+            <path id="ch_arm_r_ant" data-organ="arm_r_ant" class="organ" onclick="handleOrganClick('ch_arm_r_ant')" d="M64,88 C57,100 50,122 47,138 C44,152 41,168 39,176 C36,178 42,181 45,177 C48,168 53,148 57,135 C60,122 63,103 66,94 Z" />
+            <path id="ch_arm_l_ant" data-organ="arm_l_ant" class="organ" onclick="handleOrganClick('ch_arm_l_ant')" d="M116,88 C123,100 130,122 133,138 C136,152 139,168 141,176 C144,178 138,181 135,177 C132,168 127,148 123,135 C120,122 117,103 114,94 Z" />
+            <polygon id="ch_genital" data-organ="genital" class="organ" onclick="handleOrganClick('ch_genital')" points="83,188 97,188 90,200" />
+            <path id="ch_leg_r_ant" data-organ="leg_r_ant" class="organ" onclick="handleOrganClick('ch_leg_r_ant')" d="M67,190 C78,190 84,193 86,206 C87,230 85,258 83,278 C82,298 83,316 83,322 C78,324 70,324 67,319 C68,308 69,286 68,266 C67,242 61,218 63,203 C64,195 65,191 67,190 Z" />
+            <path id="ch_leg_l_ant" data-organ="leg_l_ant" class="organ" onclick="handleOrganClick('ch_leg_l_ant')" d="M113,190 C102,190 96,193 94,206 C93,230 95,258 97,278 C98,298 97,316 97,322 C102,324 110,324 113,319 C112,308 111,286 112,266 C113,242 119,218 117,203 C116,195 115,191 113,190 Z" />
+          </g>
+          <g id="backChild">
+            <text x="270" y="16" class="tag" style="fill:#f59e0b;">اطفال - خلفی</text>
+            <path id="ch_head_post" data-organ="head_post" class="organ" onclick="handleOrganClick('ch_head_post')" d="M270,20 C285,20 296,33 295,52 C294,68 283,78 270,78 C257,78 246,68 245,52 C244,33 255,20 270,20 Z" />
+            <path id="ch_upper_back" data-organ="upper_back" class="organ" onclick="handleOrganClick('ch_upper_back')" d="M248,84 C256,82 284,82 292,84 C296,102 295,124 291,134 C280,135 260,135 249,134 C245,124 244,102 248,84 Z" />
+            <path id="ch_lower_back" data-organ="lower_back" class="organ" onclick="handleOrganClick('ch_lower_back')" d="M249,136 C260,137 280,137 291,136 C290,154 292,176 293,186 C281,188 259,188 247,186 C248,176 250,154 249,136 Z" />
+            <path id="ch_arm_r_post" data-organ="arm_r_post" class="organ" onclick="handleOrganClick('ch_arm_r_post')" d="M244,88 C237,100 230,122 227,138 C224,152 221,168 219,176 C216,178 222,181 225,177 C228,168 233,148 237,135 C240,122 243,103 246,94 Z" />
+            <path id="ch_arm_l_post" data-organ="arm_l_post" class="organ" onclick="handleOrganClick('ch_arm_l_post')" d="M296,88 C303,100 310,122 313,138 C316,152 319,168 321,176 C324,178 318,181 315,177 C312,168 307,148 303,135 C300,122 297,103 294,94 Z" />
+            <path id="ch_leg_r_post" data-organ="leg_r_post" class="organ" onclick="handleOrganClick('ch_leg_r_post')" d="M247,190 C258,190 264,193 266,206 C267,230 265,258 263,278 C262,298 263,316 263,322 C258,324 250,324 247,319 C248,308 249,286 248,264 C247,236 241,218 243,203 C244,195 245,191 247,190 Z" />
+            <path id="ch_leg_l_post" data-organ="leg_l_post" class="organ" onclick="handleOrganClick('ch_leg_l_post')" d="M293,190 C282,190 276,193 274,206 C273,230 275,258 277,278 C278,298 277,316 277,322 C282,324 290,324 293,319 C292,308 291,286 292,266 C293,242 299,218 297,203 C296,195 295,191 293,190 Z" />
+          </g>
+        </svg>
+
+        <canvas id="drawCanvas" width="360" height="370"></canvas>
+      </div>
     </div>
   </div>
 
@@ -371,9 +441,66 @@
     const selectedOrgans = new Set();
     let currentBrushSize = 12;
 
+    const viewportBox = document.getElementById('viewportBox');
+    const zoomWrapper = document.getElementById('zoomWrapper');
     const canvas = document.getElementById('drawCanvas');
     const ctx = canvas.getContext('2d');
     let isDrawing = false;
+
+    // متغیرهای مدیریت زوم و جابجایی
+    let scale = 1.0;
+    let panX = 0;
+    let panY = 0;
+    const minScale = 1.0;
+    const maxScale = 3.5;
+
+    // متغیرهای لمس دو انگشتی
+    let isPanning = false;
+    let startDist = 0;
+    let startScale = 1.0;
+    let startTouchX = 0;
+    let startTouchY = 0;
+    let startPanX = 0;
+    let startPanY = 0;
+
+    function updateTransform() {
+      // محدود کردن pan به مرزهای کادر
+      const maxPanX = 0;
+      const minPanX = 360 - 360 * scale;
+      const maxPanY = 0;
+      const minPanY = 370 - 370 * scale;
+
+      panX = Math.min(maxPanX, Math.max(minPanX, panX));
+      panY = Math.min(maxPanY, Math.max(minPanY, panY));
+
+      zoomWrapper.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+      document.getElementById('zoomBadge').textContent = `${scale.toFixed(1)}x`;
+    }
+
+    function applyZoom(delta) {
+      const newScale = Math.min(maxScale, Math.max(minScale, scale + delta));
+      if (newScale === scale) return;
+
+      // زوم به مرکز تصویر
+      const cx = 180;
+      const cy = 185;
+      panX = cx - (cx - panX) * (newScale / scale);
+      panY = cy - (cy - panY) * (newScale / scale);
+      scale = newScale;
+
+      if (scale === 1.0) {
+        panX = 0;
+        panY = 0;
+      }
+      updateTransform();
+    }
+
+    function resetZoom() {
+      scale = 1.0;
+      panX = 0;
+      panY = 0;
+      updateTransform();
+    }
 
     const hitCanvas = document.createElement('canvas');
     hitCanvas.width = 360;
@@ -456,6 +583,7 @@
       const svgChild = document.getElementById('svgChild');
 
       clearAll();
+      resetZoom();
 
       if (group === 'child') {
         svgAdult.style.display = 'none';
@@ -495,32 +623,28 @@
       updateCalc();
     }
 
-    function getPos(e) {
-      const rect = canvas.getBoundingClientRect();
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      return { 
-        x: Math.round(clientX - rect.left), 
-        y: Math.round(clientY - rect.top) 
+    // محاسبه مختصات دقیق روی بوم اصلی (با لحاظ Scale و Pan)
+    function getCanvasCoordinates(clientX, clientY) {
+      const rect = viewportBox.getBoundingClientRect();
+      const vx = clientX - rect.left;
+      const vy = clientY - rect.top;
+      return {
+        x: Math.round((vx - panX) / scale),
+        y: Math.round((vy - panY) / scale)
       };
     }
 
-    // تشخیص اینکه آیا نقطه مورد نظر روی اندام‌های بدن قرار دارد یا خیر
     function isPixelOnBody(x, y) {
       if (x < 0 || x >= 360 || y < 0 || y >= 370) return false;
       const pixel = hitCtx.getImageData(x, y, 1, 1).data;
-      return pixel[0] > 0; // اگر رنگ پیکسل بزرگتر از صفر باشد یعنی روی بدن است
+      return pixel[0] > 0;
     }
 
-    function startDraw(e) {
+    // رویدادهای ماوس (برای دسکتاپ)
+    viewportBox.addEventListener('mousedown', (e) => {
       if (currentMode !== 'draw') return;
-      const pos = getPos(e);
-      
-      // فقط در صورتی رسم شروع می‌شود که دقیقاً روی بدن کلیک یا لمس شده باشد
-      if (!isPixelOnBody(pos.x, pos.y)) {
-        isDrawing = false;
-        return; // در غیر این صورت اجازه اسکرول صفحه داده می‌شود
-      }
+      const pos = getCanvasCoordinates(e.clientX, e.clientY);
+      if (!isPixelOnBody(pos.x, pos.y)) return;
 
       isDrawing = true;
       ctx.beginPath();
@@ -529,17 +653,13 @@
       ctx.lineJoin = 'round';
       ctx.strokeStyle = 'rgba(239, 68, 68, 0.9)';
       ctx.lineWidth = currentBrushSize;
-      
-      // رسم نقطه اولیه
       ctx.lineTo(pos.x + 0.1, pos.y + 0.1);
       ctx.stroke();
-    }
+    });
 
-    function draw(e) {
+    window.addEventListener('mousemove', (e) => {
       if (!isDrawing || currentMode !== 'draw') return;
-      const pos = getPos(e);
-
-      // اگر از مرز بدن بیرون رفت، ادامه خط کشیده نمی‌شود
+      const pos = getCanvasCoordinates(e.clientX, e.clientY);
       if (isPixelOnBody(pos.x, pos.y)) {
         ctx.lineTo(pos.x, pos.y);
         ctx.stroke();
@@ -547,43 +667,109 @@
         ctx.beginPath();
         ctx.moveTo(pos.x, pos.y);
       }
-    }
+    });
 
-    function stopDraw() {
+    window.addEventListener('mouseup', () => {
       if (isDrawing) {
         isDrawing = false;
         ctx.closePath();
-        maskCanvasWithOrgans(); // پاکسازی خودکار هرگونه بیرون‌زدگی تصادفی از لبه‌ها
+        maskCanvasWithOrgans();
         updateCalc();
       }
+    });
+
+    // رویدادهای لمسی (موبایل و تبلت - پینچ زوم و رسم مجزا)
+    function getTouchDist(t1, t2) {
+      const dx = t1.clientX - t2.clientX;
+      const dy = t1.clientY - t2.clientY;
+      return Math.sqrt(dx * dx + dy * dy);
     }
 
-    // ماسک کردن دقیق خطوط برای جلوگیری قطعی از بیرون زدن لکه‌ها از کادر بدن
+    viewportBox.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        // شروع پینچ زوم و جابجایی دو انگشتی
+        isDrawing = false;
+        isPanning = true;
+        startDist = getTouchDist(e.touches[0], e.touches[1]);
+        startScale = scale;
+        startTouchX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        startTouchY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        startPanX = panX;
+        startPanY = panY;
+        return;
+      }
+
+      if (e.touches.length === 1 && currentMode === 'draw') {
+        const t = e.touches[0];
+        const pos = getCanvasCoordinates(t.clientX, t.clientY);
+        if (!isPixelOnBody(pos.x, pos.y)) {
+          isDrawing = false;
+          return; // اجازه اسکرول عمودی به صفحه
+        }
+
+        isDrawing = true;
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.9)';
+        ctx.lineWidth = currentBrushSize;
+        ctx.lineTo(pos.x + 0.1, pos.y + 0.1);
+        ctx.stroke();
+      }
+    }, { passive: true });
+
+    viewportBox.addEventListener('touchmove', (e) => {
+      if (isPanning && e.touches.length === 2) {
+        if (e.cancelable) e.preventDefault();
+        const dist = getTouchDist(e.touches[0], e.touches[1]);
+        const curTouchX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const curTouchY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
+        const newScale = Math.min(maxScale, Math.max(minScale, startScale * (dist / startDist)));
+        scale = newScale;
+
+        panX = startPanX + (curTouchX - startTouchX);
+        panY = startPanY + (curTouchY - startTouchY);
+        updateTransform();
+        return;
+      }
+
+      if (isDrawing && e.touches.length === 1 && currentMode === 'draw') {
+        if (e.cancelable) e.preventDefault();
+        const t = e.touches[0];
+        const pos = getCanvasCoordinates(t.clientX, t.clientY);
+
+        if (isPixelOnBody(pos.x, pos.y)) {
+          ctx.lineTo(pos.x, pos.y);
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(pos.x, pos.y);
+        }
+      }
+    }, { passive: false });
+
+    window.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) isPanning = false;
+      if (isDrawing && e.touches.length === 0) {
+        isDrawing = false;
+        ctx.closePath();
+        maskCanvasWithOrgans();
+        updateCalc();
+      }
+    });
+
     function maskCanvasWithOrgans() {
       const userImg = ctx.getImageData(0, 0, 360, 370);
       const mapImg = hitCtx.getImageData(0, 0, 360, 370);
       for (let i = 0; i < userImg.data.length; i += 4) {
         if (mapImg.data[i] === 0) {
-          userImg.data[i + 3] = 0; // نامرئی کردن پیکسل‌های خارج از بدن
+          userImg.data[i + 3] = 0;
         }
       }
       ctx.putImageData(userImg, 0, 0);
     }
-
-    canvas.addEventListener('mousedown', startDraw);
-    canvas.addEventListener('mousemove', draw);
-    window.addEventListener('mouseup', stopDraw);
-
-    // پشتیبانی کامل لمسی بدون قفل کردن اسکرول عمودی صفحه
-    canvas.addEventListener('touchstart', startDraw, { passive: true });
-    canvas.addEventListener('touchmove', (e) => {
-      if (isDrawing) {
-        // تنها هنگامی که قلم روی بدن فعال است از اسکرول جلوگیری شود
-        if (e.cancelable) e.preventDefault();
-        draw(e);
-      }
-    }, { passive: false });
-    window.addEventListener('touchend', stopDraw);
 
     function clearAll() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
