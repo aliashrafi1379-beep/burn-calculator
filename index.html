@@ -48,15 +48,11 @@
       transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
     }
 
-    html {
-      scroll-behavior: smooth;
-    }
-
     body {
       background-color: var(--bg);
       color: var(--text);
       margin: 0;
-      padding: 10px 10px 80px 10px;
+      padding: 10px 18px 40px 10px; /* فاصله از راست برای نوار اسکرول */
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -64,6 +60,58 @@
       -webkit-tap-highlight-color: transparent;
       font-size: 14.5px;
       overflow-y: auto;
+    }
+
+    /* نوار اسکرول لمسی عمودی اختصاصی */
+    .quick-scrollbar-track {
+      position: fixed;
+      top: 50px;
+      bottom: 20px;
+      right: 2px;
+      width: 22px;
+      z-index: 9999;
+      display: flex;
+      justify-content: center;
+      touch-action: none;
+    }
+
+    .quick-scrollbar-bar {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: rgba(148, 163, 184, 0.2);
+      border-radius: 4px;
+    }
+
+    .quick-scrollbar-thumb {
+      position: absolute;
+      top: 0;
+      width: 18px;
+      height: 48px;
+      background: linear-gradient(135deg, #0284c7, #38bdf8);
+      border: 1.5px solid rgba(255, 255, 255, 0.4);
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.5);
+      cursor: grab;
+      touch-action: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .quick-scrollbar-thumb::after {
+      content: "⋮";
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .quick-scrollbar-thumb:active {
+      cursor: grabbing;
+      transform: scaleX(1.1);
+      background: #0284c7;
     }
 
     .top-bar {
@@ -351,44 +399,15 @@
       margin-top: 10px;
     }
     .submit-btn:active { transform: scale(0.98); }
-
-    /* دکمه شناور پرش سریع به ارسال اطلاعات (Floating Action Button) */
-    .quick-scroll-fab {
-      position: fixed;
-      bottom: 16px;
-      left: 16px;
-      z-index: 999;
-      background: linear-gradient(135deg, #0284c7, #0369a1);
-      color: #ffffff;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 25px;
-      padding: 8px 14px;
-      font-size: 13.5px;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.45);
-      cursor: pointer;
-    }
-    .quick-scroll-fab:active { transform: scale(0.95); }
-    .fab-badge {
-      background: rgba(0, 0, 0, 0.35);
-      padding: 2px 7px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: 800;
-      color: #38bdf8;
-    }
   </style>
 </head>
 <body>
 
-  <!-- نوار پرش شناور به بخش ارسال -->
-  <button class="quick-scroll-fab" onclick="scrollToSubmit()">
-    <span>⬇️ ارسال اطلاعات</span>
-    <span class="fab-badge" id="fabTbsa">۰٪</span>
-  </button>
+  <!-- نوار اسکرول لمسی اختصاصی در لبه سمت راست -->
+  <div class="quick-scrollbar-track" id="scrollTrack">
+    <div class="quick-scrollbar-bar"></div>
+    <div class="quick-scrollbar-thumb" id="scrollThumb"></div>
+  </div>
 
   <div class="top-bar">
     <div class="app-title">🩺 نقشه تعاملی سوختگی</div>
@@ -414,7 +433,6 @@
   </div>
 
   <div class="panel">
-    <!-- نوار حالت‌ها با اضافه شدن حالت جابجایی دست‌آزاد -->
     <div class="mode-bar">
       <button class="mode-btn active" id="btnModeOrgan" onclick="setMode('organ')">✋ انتخاب اندام</button>
       <button class="mode-btn" id="btnModeDraw" onclick="setMode('draw')">✏️ کشیدن موضعی</button>
@@ -437,7 +455,7 @@
       </div>
     </div>
 
-    <!-- کادر آناتومی با زوم دو جهته دقیق -->
+    <!-- کادر آناتومی و بستر زوم -->
     <div class="viewport-box" id="viewportBox">
       <div class="zoom-level-badge" id="zoomBadge">1.0x</div>
       
@@ -502,7 +520,6 @@
   </div>
 
   <div class="panel" id="sectionCalculation">
-    <!-- انتخاب فرمول بزرگسالان -->
     <div id="adultFormulaSelector" style="display: block;">
       <label style="margin-bottom: 6px;">انتخاب پروتکل احیا (بزرگسال):</label>
       <div class="formula-selector">
@@ -515,7 +532,6 @@
       </div>
     </div>
 
-    <!-- کارت نمایش نتایج بالینی -->
     <div class="calc-card" id="metricsDisplay">
       در حال محاسبه...
     </div>
@@ -570,7 +586,6 @@
     const minScale = 1.0;
     const maxScale = 3.5;
 
-    // وضعیت جابجایی لمسی تک‌انگشتی و دو‌انگشتی
     let isDraggingPan = false;
     let dragStartX = 0;
     let dragStartY = 0;
@@ -634,12 +649,84 @@
       updateTransform();
     }
 
-    function scrollToSubmit() {
-      const target = document.getElementById('sectionCalculation');
-      if (target) {
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // ==========================================
+    // پیاده‌سازی اسکرول‌بار لمسی و کشیدنی سمت راست
+    // ==========================================
+    const scrollTrack = document.getElementById('scrollTrack');
+    const scrollThumb = document.getElementById('scrollThumb');
+    let isDraggingScrollBar = false;
+    let scrollDragStartY = 0;
+    let scrollDragStartScrollTop = 0;
+
+    function updateScrollBarThumb() {
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      if (docHeight <= 0) {
+        scrollTrack.style.display = 'none';
+        return;
       }
+      scrollTrack.style.display = 'flex';
+
+      const trackHeight = scrollTrack.clientHeight - scrollThumb.clientHeight;
+      const scrollRatio = Math.max(0, Math.min(1, window.scrollY / docHeight));
+      scrollThumb.style.top = `${scrollRatio * trackHeight}px`;
     }
+
+    window.addEventListener('scroll', updateScrollBarThumb, { passive: true });
+    window.addEventListener('resize', updateScrollBarThumb);
+
+    function handleScrollStart(clientY) {
+      isDraggingScrollBar = true;
+      scrollDragStartY = clientY;
+      scrollDragStartScrollTop = window.scrollY;
+    }
+
+    function handleScrollMove(clientY) {
+      if (!isDraggingScrollBar) return;
+      const trackHeight = scrollTrack.clientHeight - scrollThumb.clientHeight;
+      const deltaY = clientY - scrollDragStartY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+
+      const newScroll = scrollDragStartScrollTop + (deltaY / trackHeight) * docHeight;
+      window.scrollTo(0, Math.max(0, Math.min(docHeight, newScroll)));
+    }
+
+    scrollThumb.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      handleScrollStart(e.clientY);
+    });
+
+    scrollThumb.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      handleScrollStart(e.touches[0].clientY);
+    }, { passive: false });
+
+    scrollTrack.addEventListener('mousedown', (e) => {
+      if (e.target === scrollThumb) return;
+      const rect = scrollTrack.getBoundingClientRect();
+      const clickY = e.clientY - rect.top;
+      const trackHeight = scrollTrack.clientHeight - scrollThumb.clientHeight;
+      const ratio = Math.max(0, Math.min(1, clickY / trackHeight));
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      window.scrollTo(0, ratio * docHeight);
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (isDraggingScrollBar) handleScrollMove(e.clientY);
+    });
+
+    window.addEventListener('touchmove', (e) => {
+      if (isDraggingScrollBar) {
+        if (e.cancelable) e.preventDefault();
+        handleScrollMove(e.touches[0].clientY);
+      }
+    }, { passive: false });
+
+    window.addEventListener('mouseup', () => { isDraggingScrollBar = false; });
+    window.addEventListener('touchend', () => { isDraggingScrollBar = false; });
+
+    setTimeout(updateScrollBarThumb, 300);
+
+    // ==========================================
 
     const hitCanvas = document.createElement('canvas');
     hitCanvas.width = 360;
@@ -739,6 +826,7 @@
 
       rasterizeOrgans();
       updateCalc();
+      setTimeout(updateScrollBarThumb, 100);
     }
 
     function setAdultFormula(formula) {
@@ -779,8 +867,7 @@
       const vy = clientY - rect.top;
       return {
         x: Math.round((vx - panX) / scale),
-        y: Math.round((vy - panY) / scale),
-        vx, vy
+        y: Math.round((vy - panY) / scale)
       };
     }
 
@@ -790,7 +877,6 @@
       return pixel[0] > 0;
     }
 
-    // رویدادهای ماوس
     viewportBox.addEventListener('mousedown', (e) => {
       if (currentMode === 'pan') {
         isDraggingPan = true;
@@ -851,7 +937,6 @@
       return Math.hypot(dx, dy);
     }
 
-    // رویدادهای لمسی
     viewportBox.addEventListener('touchstart', (e) => {
       if (e.touches.length === 2) {
         isDrawing = false;
@@ -877,7 +962,6 @@
       if (e.touches.length === 1) {
         const t = e.touches[0];
 
-        // در حالت جابجایی کادر با تک‌انگشت
         if (currentMode === 'pan') {
           isDraggingPan = true;
           dragStartX = t.clientX;
@@ -887,11 +971,9 @@
           return;
         }
 
-        // در حالت رسم
         if (currentMode === 'draw') {
           const pos = getCanvasCoordinates(t.clientX, t.clientY);
           if (!isPixelOnBody(pos.x, pos.y)) {
-            // انگشت روی پس‌زمینه خالی است؛ رسم نمی‌شود تا صفحه اسکرول شود
             isDrawing = false;
             return;
           }
@@ -910,7 +992,6 @@
     }, { passive: true });
 
     viewportBox.addEventListener('touchmove', (e) => {
-      // پینچ دو انگشتی
       if (isPinchPanning && e.touches.length === 2) {
         if (e.cancelable) e.preventDefault();
         const t1 = e.touches[0];
@@ -930,7 +1011,6 @@
         return;
       }
 
-      // جابجایی با تک‌انگشت در حالت Pan
       if (isDraggingPan && e.touches.length === 1 && currentMode === 'pan') {
         if (e.cancelable) e.preventDefault();
         const t = e.touches[0];
@@ -940,7 +1020,6 @@
         return;
       }
 
-      // رسم در حالت Draw
       if (isDrawing && e.touches.length === 1 && currentMode === 'draw') {
         if (e.cancelable) e.preventDefault();
         const t = e.touches[0];
@@ -1090,9 +1169,6 @@
     function updateCalc() {
       const c = calculate();
       const display = document.getElementById('metricsDisplay');
-      
-      // به‌روزرسانی درصد روی دکمه شناور
-      document.getElementById('fabTbsa').textContent = `${c.totalTbsa}%`;
 
       if (c.group === 'adult') {
         const fName = (c.formula === 'parkland') ? "پارکلند (۴ سی‌سی)" : "بروک تعدیل‌شده (۲ سی‌سی)";
