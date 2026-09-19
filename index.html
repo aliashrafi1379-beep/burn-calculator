@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.5">
-  <title>آناتومی سوختگی پارکلند</title>
+  <title>آناتومی و احیای سوختگی بالینی</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   
   <!-- فونت وزیرمتن -->
@@ -52,7 +52,7 @@
       background-color: var(--bg);
       color: var(--text);
       margin: 0;
-      padding: 10px 10px 40px 10px;
+      padding: 10px 10px 50px 10px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -144,7 +144,6 @@
       border-color: var(--accent);
     }
 
-    /* نوار فوکوس و دسترسی سریع */
     .focus-bar {
       display: flex;
       gap: 6px;
@@ -290,6 +289,32 @@
     }
     .tag { font-size: 11px; fill: var(--muted); font-weight: 700; pointer-events: none; text-anchor: middle; }
 
+    /* دکمه‌های فرمول محاسباتی */
+    .formula-selector {
+      display: flex;
+      gap: 8px;
+      margin: 8px 0 12px 0;
+    }
+    .formula-btn {
+      flex: 1;
+      padding: 7px 10px;
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: var(--input-bg);
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .formula-btn.active {
+      background: #0284c7;
+      color: #ffffff;
+      border-color: #38bdf8;
+    }
+
     .calc-card {
       background: var(--input-bg);
       border: 1px solid var(--border-color);
@@ -298,7 +323,17 @@
       line-height: 2;
       font-size: 14px;
     }
-    .highlight-val { color: var(--accent); font-weight: 800; font-size: 16px; }
+    .highlight-val { color: var(--accent); font-weight: 800; font-size: 15.5px; }
+    .badge-fluid {
+      display: inline-block;
+      padding: 1px 7px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-right: 3px;
+    }
+    .badge-ringer { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+    .badge-dextrose { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
 
     .submit-btn {
       width: 100%;
@@ -310,7 +345,7 @@
       font-size: 15.5px;
       font-weight: 700;
       cursor: pointer;
-      margin-top: 8px;
+      margin-top: 10px;
     }
     .submit-btn:active { transform: scale(0.98); }
   </style>
@@ -347,11 +382,11 @@
       <button class="mode-btn" style="flex: 0.5; color: #ef4444;" onclick="clearAll()">🗑 پاک</button>
     </div>
 
-    <!-- دکمه‌های فوکوس خودکار روی نمای قدامی و خلفی -->
+    <!-- دکمه‌های فوکوس سریع -->
     <div class="focus-bar">
-      <button class="focus-btn" onclick="focusView('front')">🔍 زوم نمای قدامی (روبرو)</button>
-      <button class="focus-btn" onclick="focusView('back')">🔍 زوم نمای خلفی (پشت)</button>
-      <button class="focus-btn" style="flex: 0.6;" onclick="resetZoom()">نمای کامل</button>
+      <button class="focus-btn" onclick="focusView('front')">🔍 نمای قدامی (روبرو)</button>
+      <button class="focus-btn" onclick="focusView('back')">🔍 نمای خلفی (پشت)</button>
+      <button class="focus-btn" style="flex: 0.6;" onclick="resetZoom()">کامل</button>
     </div>
 
     <div class="brush-control" id="brushControl">
@@ -362,7 +397,7 @@
       </div>
     </div>
 
-    <!-- کادر آناتومی با زوم دو جهته دقیق -->
+    <!-- کادر آناتومی و بستر زوم -->
     <div class="viewport-box" id="viewportBox">
       <div class="zoom-level-badge" id="zoomBadge">1.0x</div>
       
@@ -427,12 +462,24 @@
   </div>
 
   <div class="panel">
-    <div class="calc-card" id="metricsDisplay">
-      درصد کل سوختگی (TBSA): <span class="highlight-val">۰٪</span><br>
-      • اندام‌های کامل: <b>۰٪</b> | • لکه‌های موضعی: <b>۰٪</b><br>
-      مایع ۲۴ ساعت اول: <span class="highlight-val">۰</span> سی‌سی رینگر<br>
-      سرعت تزریق ۸ ساعت اول: <span class="highlight-val">۰</span> cc/hr
+    <!-- دکمه‌های انتخاب فرمول بزرگسالان -->
+    <div id="adultFormulaSelector" style="display: block;">
+      <label style="margin-bottom: 6px;">انتخاب پروتکل احیا (بزرگسال):</label>
+      <div class="formula-selector">
+        <button class="formula-btn active" id="btnParkland" onclick="setAdultFormula('parkland')">
+          پارکلند (4 mL/kg/%)
+        </button>
+        <button class="formula-btn" id="btnBrooke" onclick="setAdultFormula('brooke')">
+          بروک تعدیل‌شده (2 mL/kg/%)
+        </button>
+      </div>
     </div>
+
+    <!-- کارت نمایش نتایج بالینی -->
+    <div class="calc-card" id="metricsDisplay">
+      در حال محاسبه...
+    </div>
+
     <button class="submit-btn" id="btnSubmit" onclick="sendToBot()">ارسال اطلاعات به ربات</button>
   </div>
 
@@ -468,6 +515,7 @@
     let currentMode = 'organ';
     const selectedOrgans = new Set();
     let currentBrushSize = 12;
+    let selectedAdultFormula = 'parkland'; // 'parkland' or 'brooke'
 
     const viewportBox = document.getElementById('viewportBox');
     const zoomWrapper = document.getElementById('zoomWrapper');
@@ -482,13 +530,10 @@
     const minScale = 1.0;
     const maxScale = 3.5;
 
-    // پینچ لمسی
     let isPinchPanning = false;
     let initialPinchDist = 0;
     let initialPinchScale = 1.0;
     let initialPinchCenterCanvas = { x: 0, y: 0 };
-    let initialTouchCenter = { x: 0, y: 0 };
-    let initialPan = { x: 0, y: 0 };
 
     function clampPan() {
       const maxPanX = 0;
@@ -506,15 +551,12 @@
       document.getElementById('zoomBadge').textContent = `${scale.toFixed(1)}x`;
     }
 
-    // فوکوس سریع با یک کلیک روی نمای قدامی یا خلفی
     function focusView(side) {
       scale = 1.95;
       if (side === 'front') {
-        // متمرکز بر قدامی (سمت چپ بوم)
         panX = 0;
         panY = -25;
       } else {
-        // متمرکز بر خلفی (سمت راست بوم)
         panX = -360 * (scale - 1);
         panY = -25;
       }
@@ -624,6 +666,7 @@
       const weightInput = document.getElementById('weight');
       const svgAdult = document.getElementById('svgAdult');
       const svgChild = document.getElementById('svgChild');
+      const adultSelector = document.getElementById('adultFormulaSelector');
 
       clearAll();
       resetZoom();
@@ -631,14 +674,23 @@
       if (group === 'child') {
         svgAdult.style.display = 'none';
         svgChild.style.display = 'block';
+        adultSelector.style.display = 'none';
         if (parseFloat(weightInput.value) >= 50) weightInput.value = 15;
       } else {
         svgAdult.style.display = 'block';
         svgChild.style.display = 'none';
+        adultSelector.style.display = 'block';
         if (parseFloat(weightInput.value) < 30) weightInput.value = 70;
       }
 
       rasterizeOrgans();
+      updateCalc();
+    }
+
+    function setAdultFormula(formula) {
+      selectedAdultFormula = formula;
+      document.getElementById('btnParkland').classList.toggle('active', formula === 'parkland');
+      document.getElementById('btnBrooke').classList.toggle('active', formula === 'brooke');
       updateCalc();
     }
 
@@ -666,16 +718,13 @@
       updateCalc();
     }
 
-    // تبدیل موقعیت کلیک به مختصات بوم (Canvas)
     function getCanvasCoordinates(clientX, clientY) {
       const rect = viewportBox.getBoundingClientRect();
       const vx = clientX - rect.left;
       const vy = clientY - rect.top;
       return {
         x: Math.round((vx - panX) / scale),
-        y: Math.round((vy - panY) / scale),
-        viewportX: vx,
-        viewportY: vy
+        y: Math.round((vy - panY) / scale)
       };
     }
 
@@ -685,7 +734,6 @@
       return pixel[0] > 0;
     }
 
-    // رویدادهای ماوس
     viewportBox.addEventListener('mousedown', (e) => {
       if (currentMode !== 'draw') return;
       const pos = getCanvasCoordinates(e.clientX, e.clientY);
@@ -729,7 +777,6 @@
       return Math.hypot(dx, dy);
     }
 
-    // رویدادهای لمسی با تمرکز بر مکان دو انگشت
     viewportBox.addEventListener('touchstart', (e) => {
       if (e.touches.length === 2) {
         isDrawing = false;
@@ -744,18 +791,13 @@
         const midClientX = (t1.clientX + t2.clientX) / 2;
         const midClientY = (t1.clientY + t2.clientY) / 2;
         
-        initialTouchCenter = {
-          x: midClientX - rect.left,
-          y: midClientY - rect.top
-        };
+        const touchCenterX = midClientX - rect.left;
+        const touchCenterY = midClientY - rect.top;
 
-        // نقطه بوم زیر دو انگشت
         initialPinchCenterCanvas = {
-          x: (initialTouchCenter.x - panX) / scale,
-          y: (initialTouchCenter.y - panY) / scale
+          x: (touchCenterX - panX) / scale,
+          y: (touchCenterY - panY) / scale
         };
-
-        initialPan = { x: panX, y: panY };
         return;
       }
 
@@ -788,17 +830,14 @@
         if (initialPinchDist === 0) return;
 
         const rect = viewportBox.getBoundingClientRect();
-        const curTouchCenter = {
-          x: ((t1.clientX + t2.clientX) / 2) - rect.left,
-          y: ((t1.clientY + t2.clientY) / 2) - rect.top
-        };
+        const curTouchCenterX = ((t1.clientX + t2.clientX) / 2) - rect.left;
+        const curTouchCenterY = ((t1.clientY + t2.clientY) / 2) - rect.top;
 
         const targetScale = Math.min(maxScale, Math.max(minScale, initialPinchScale * (currentDist / initialPinchDist)));
         scale = targetScale;
 
-        // فرمول محاسبه مبدا زوم دقیقاً روی مکان باز شدن دو انگشت
-        panX = curTouchCenter.x - initialPinchCenterCanvas.x * scale;
-        panY = curTouchCenter.y - initialPinchCenterCanvas.y * scale;
+        panX = curTouchCenterX - initialPinchCenterCanvas.x * scale;
+        panY = curTouchCenterY - initialPinchCenterCanvas.y * scale;
 
         updateTransform();
         return;
@@ -847,6 +886,14 @@
       updateCalc();
     }
 
+    // محاسبه مایع نگهدارنده اطفال به روش هالیدی-سگار
+    function calcHollidaySegar(weight) {
+      if (weight <= 0) return 0;
+      if (weight <= 10) return weight * 100;
+      if (weight <= 20) return 1000 + (weight - 10) * 50;
+      return 1500 + (weight - 20) * 20;
+    }
+
     function calculate() {
       const group = document.getElementById('ageGroup').value;
       const weight = parseFloat(document.getElementById('weight').value) || 0;
@@ -890,20 +937,86 @@
       spotTbsa = parseFloat(spotTbsa.toFixed(1));
       let totalTbsa = Math.min(100, parseFloat((organTbsa + spotTbsa).toFixed(1)));
 
-      const totalFluid = 4 * weight * totalTbsa;
-      const rate8h = totalFluid > 0 ? (totalFluid / 2) / 8 : 0;
+      if (group === 'adult') {
+        const factor = (selectedAdultFormula === 'parkland') ? 4 : 2;
+        const totalRinger = factor * weight * totalTbsa;
+        const ringer8h = totalRinger / 2;
+        const ringer16h = totalRinger / 2;
+        const rateRinger8h = ringer8h > 0 ? (ringer8h / 8) : 0;
+        const rateRinger16h = ringer16h > 0 ? (ringer16h / 16) : 0;
 
-      return { group, weight, organTbsa, spotTbsa, totalTbsa, totalFluid, rate8h };
+        return {
+          group: 'adult',
+          formula: selectedAdultFormula,
+          factor,
+          weight,
+          organTbsa,
+          spotTbsa,
+          totalTbsa,
+          totalRinger,
+          ringer8h,
+          ringer16h,
+          rateRinger8h,
+          rateRinger16h
+        };
+      } else {
+        // اطفال: فرمول بروک اطفال (3 mL) + نگهدارنده هولیدی-سگار
+        const totalRinger = 3 * weight * totalTbsa;
+        const ringer8h = totalRinger / 2;
+        const ringer16h = totalRinger / 2;
+        const rateRinger8h = ringer8h > 0 ? (ringer8h / 8) : 0;
+        const rateRinger16h = ringer16h > 0 ? (ringer16h / 16) : 0;
+
+        const totalMaintenance = calcHollidaySegar(weight);
+        const rateMaintenance = totalMaintenance > 0 ? (totalMaintenance / 24) : 0;
+
+        return {
+          group: 'child',
+          formula: 'pediatric_brooke',
+          weight,
+          organTbsa,
+          spotTbsa,
+          totalTbsa,
+          totalRinger,
+          ringer8h,
+          ringer16h,
+          rateRinger8h,
+          rateRinger16h,
+          totalMaintenance,
+          rateMaintenance
+        };
+      }
     }
 
     function updateCalc() {
       const c = calculate();
-      document.getElementById('metricsDisplay').innerHTML = `
-        درصد کل سوختگی (TBSA): <span class="highlight-val">${c.totalTbsa}%</span><br>
-        • اندام‌های کامل: <b>${c.organTbsa}%</b> | • لکه‌های موضعی: <b>${c.spotTbsa}%</b><br>
-        مایع ۲۴ ساعت اول: <span class="highlight-val">${Math.round(c.totalFluid).toLocaleString('fa-IR')}</span> سی‌سی رینگر<br>
-        سرعت تزریق ۸ ساعت اول: <span class="highlight-val">${Math.round(c.rate8h).toLocaleString('fa-IR')}</span> cc/hr
-      `;
+      const display = document.getElementById('metricsDisplay');
+
+      if (c.group === 'adult') {
+        const fName = (c.formula === 'parkland') ? "پارکلند (۴ سی‌سی)" : "بروک تعدیل‌شده (۲ سی‌سی)";
+        display.innerHTML = `
+          درصد کل سوختگی (TBSA): <span class="highlight-val">${c.totalTbsa}%</span><br>
+          • اندام‌های کامل: <b>${c.organTbsa}%</b> | • لکه‌های موضعی: <b>${c.spotTbsa}%</b><br>
+          پروتکل انتخابی: <span style="color:#38bdf8; font-weight:700;">${fName}</span><br>
+          💧 <span class="badge-fluid badge-ringer">کل رینگر لاکتات ۲۴ ساعت:</span> <span class="highlight-val">${Math.round(c.totalRinger).toLocaleString('fa-IR')} mL</span><br>
+          ⏱ <b>۸ ساعت اول:</b> ${Math.round(c.ringer8h).toLocaleString('fa-IR')} mL (با سرعت <b style="color:#38bdf8">${Math.round(c.rateRinger8h).toLocaleString('fa-IR')} cc/hr</b>)<br>
+          ⏱ <b>۱۶ ساعت دوم:</b> ${Math.round(c.ringer16h).toLocaleString('fa-IR')} mL (با سرعت <b>${Math.round(c.rateRinger16h).toLocaleString('fa-IR')} cc/hr</b>)
+        `;
+      } else {
+        display.innerHTML = `
+          درصد کل سوختگی (TBSA): <span class="highlight-val">${c.totalTbsa}%</span><br>
+          • اندام‌های کامل: <b>${c.organTbsa}%</b> | • لکه‌های موضعی: <b>${c.spotTbsa}%</b><br>
+          ────────────────────<br>
+          💧 <b>۱. مایع جبرانی سوختگی (بروک اطفال):</b><br>
+          • <span class="badge-fluid badge-ringer">کل رینگر لاکتات:</span> <span class="highlight-val">${Math.round(c.totalRinger).toLocaleString('fa-IR')} mL</span><br>
+          • سرعت ۸ ساعت اول: <b style="color:#38bdf8">${Math.round(c.rateRinger8h).toLocaleString('fa-IR')} cc/hr</b> (${Math.round(c.ringer8h).toLocaleString('fa-IR')} mL)<br>
+          • سرعت ۱۶ ساعت دوم: <b>${Math.round(c.rateRinger16h).toLocaleString('fa-IR')} cc/hr</b> (${Math.round(c.ringer16h).toLocaleString('fa-IR')} mL)<br>
+          ────────────────────<br>
+          🍬 <b>۲. مایع نگهدارنده پایه (هولیدی-سگار):</b><br>
+          • <span class="badge-fluid badge-dextrose">سرم D5W 0.45% Saline:</span> <span class="highlight-val">${Math.round(c.totalMaintenance).toLocaleString('fa-IR')} mL</span> در ۲۴ ساعت<br>
+          • سرعت یکنواخت تزریق: <b style="color:#f59e0b">${Math.round(c.rateMaintenance).toLocaleString('fa-IR')} cc/hr</b>
+        `;
+      }
     }
 
     function sendToBot() {
@@ -914,14 +1027,7 @@
         return;
       }
 
-      const payload = JSON.stringify({
-        group: data.group,
-        weight: Number(data.weight),
-        organTbsa: Number(data.organTbsa),
-        spotTbsa: Number(data.spotTbsa),
-        totalTbsa: Number(data.totalTbsa),
-        totalFluid: Math.round(data.totalFluid)
-      });
+      const payload = JSON.stringify(data);
 
       if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.sendData) {
         try {
@@ -933,6 +1039,9 @@
         alert("این صفحه باید از طریق دکمه پایین کیبورد ربات تلگرام اجرا شود.");
       }
     }
+
+    // محاسبه اولیه
+    updateCalc();
   </script>
 </body>
 </html>
